@@ -32,12 +32,24 @@ $string['notrequired'] = 'not required';
 $string['privacy:metadata'] = 'We do not share any personal data with third parties.';
 $string['proctoringheader'] = '<strong>To continue with this quiz attempt you must open your webcam, and it will take some of your pictures randomly during the quiz.</strong>';
 $string['proctoringlabel'] = 'I agree with the validation process.';
-$string['proctoringstatement'] = 'This exam requires screen share and webcam access.<br/>(Please allow your web browser to access your camera).';
-$string['camhtml'] = '<span class="camera"> <video width="100" id="video">Video stream not available.</video></span> <canvas id="canvas" style="display:none;"> </canvas> <img style="display:none;" id="photo" alt="The screen capture will appear in this box."/>';
 $string['screensharemsg'] = '';
-$string['screenhtml'] = '<span><video style="display: none" width="100" id="video-screen" autoplay></video></span><canvas id="canvas-screen" style="display:none;"></canvas><img id="photo-screen" alt="The picture will appear in this box." style="display:none;"/><span class="output-screen" style="display:none;"></span><span id="log-screen" style="display:none;"></span>';
+$string['screenhtml'] = '
+    <span>
+        <video class="hidden" width="100" id="video-screen" autoplay></video>
+    </span>
+    <canvas id="canvas-screen" class="hidden"></canvas>
+    <img id="photo-screen" alt="The picture will appear in this box." class="hidden"/>
+    <span class="output-screen" class="hidden"></span>
+    <span id="log-screen" class="hidden"></span>
+';
 $string['proctoringstatement'] = 'This exam requires screenshare and webcam access.<br />(Please share screen & allow webcam access).';
-$string['camhtml'] = '<div class="camera"> <video width="100" id="video">Video stream not available.</video></div> <canvas id="canvas" style="display:none;"> </canvas> <img style="display:none;" id="photo" alt="The screen capture will appear in this box."/>';
+$string['camhtml'] = '
+    <div class="camera"> 
+        <video width="100" id="video">Video stream not available.</video>
+    </div> 
+    <canvas id="canvas" class="hidden"></canvas>
+    <img id="photo" class="hidden" alt="The screen capture will appear in this box."/>
+';
 $string['pluginname'] = 'Proctoring';
 $string['quizaccess_proctoring'] = 'Quizaccess Proctoring';
 $string['youmustagree'] = 'You must agree to validate your identity before continue.';
@@ -72,6 +84,7 @@ $string['privacy:metadata:quizaccess_proctoring_logs'] = 'Moodle Quiz access Pro
 
 $string['proctoring:sendcamshot'] = 'Proctoring send webcam photo';
 $string['proctoring:getcamshots'] = 'Proctoring get webcam photos';
+$string['proctoring:deletecamshots'] = 'Proctoring delete webcam photos';
 $string['proctoring:viewreport'] = 'Proctoring view report';
 $string['name'] = 'Student Name';
 $string['webcampicture'] = 'Captured Pictures';
@@ -103,8 +116,14 @@ $string['setting:fcthreshold'] = 'Face match threshold percentage.';
 $string['setting:fcthresholddesc'] = 'Face match threshold percentage.';
 
 $string['buttonlabel:deletebutton'] = 'Delete images';
-$string['warning:camera allow warning'] = 'Please allow camera access.';
 $string['warning:cameraallowwarning'] = 'Please allow camera access.';
+$string['warning:sharescreen'] = 'Please share entire screen.';
+$string['warning:keepparentwindowopen'] = 'You need to keep the parent window open!';
+$string['warning:sorry:restartattempt'] = 'Sorry !! You need to restart the attempt as you have stopped the screenshare.';
+$string['warning:sorry:sharescreen'] = 'Sorry !! You need to share entire screen.';
+
+$string['error:requiresecure'] = 'Quiz requires secure connection (through the HTPPS)!';
+$string['error:takingimage'] = 'Something went wrong during taking the image';
 
 $string['settingscontroll:save'] = 'Save Settings';
 $string['settingscontroll:deleteall'] = 'Purge All Proctoring Data';
@@ -136,7 +155,8 @@ $string['initiate_facematch_task'] = 'Initiate facematch task';
 $string['modal:sharescreenstate'] = 'Share Screen State:';
 $string['modal:displaysurface'] = 'Display Surface:';
 $string['modal:facevalidation'] = 'Face Validated:';
-$string['modal:sharescreenbtn'] = 'share screen';
+$string['modal:allowcamera'] = 'Allow your webcam';
+$string['modal:sharescreenbtn'] = 'Share screen';
 $string['modal:disabled'] = 'Disabled';
 $string['modal:pending'] = 'Pending';
 $string['modal:validateface'] = 'Validate Face Recognition';
