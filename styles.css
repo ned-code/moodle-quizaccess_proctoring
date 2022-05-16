@@ -1,3 +1,36 @@
+.quiz-check-form.quizaccess_proctoring #fitem_id_actionbtns > .fitemtitle {
+    display: none;
+}
+
+.quizaccess_proctoring-container .hidden {
+    display: none !important;
+}
+.quizaccess_proctoring-container .proctoring-access-button {
+    margin: 7px 0;
+    position: relative;
+}
+.quizaccess_proctoring-container .proctoring-access-button[disabled]::after{
+    content: "\f046";
+    right: -20px;
+    top: 0;
+    display: flex;
+    position: absolute;
+    align-items: center;
+    height: 100%;
+    color: green;
+    font: normal normal normal 14px/1 FontAwesome;
+}
+.quizaccess_proctoring-container #fcvalidate {
+    height:50px;
+    margin: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.quizaccess_proctoring-container video:not([height]) {
+    display: none;
+}
+
 body.lb-disable-scrolling {
     overflow: hidden;
 }
@@ -220,7 +253,7 @@ body.lb-disable-scrolling {
     opacity: 1;
 }
 
-/* 
+/*
 .moodle-dialogue-hd{
     max-height: calc(100vh - 10px);
     overflow-y: auto;
