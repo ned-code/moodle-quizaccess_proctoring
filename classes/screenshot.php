@@ -24,6 +24,7 @@
 
 namespace quizaccess_proctoring;
 
+use quizaccess_proctoring\shared_lib as NED;
 use core\persistent;
 
 defined('MOODLE_INTERNAL') || die();
@@ -35,7 +36,7 @@ defined('MOODLE_INTERNAL') || die();
 class screenshot extends persistent {
 
     /** Table name for the persistent. */
-    const TABLE = 'quizaccess_proctoring_logs';
+    const TABLE = NED::TABLE_LOG;
 
     /**
      * Return the definition of the properties of this model.
@@ -48,7 +49,7 @@ class screenshot extends persistent {
                 'type' => PARAM_INT,
                 'default' => '',
             ],
-            'quizid' => [
+            'cmid' => [
                 'type' => PARAM_INT,
                 'default' => '',
             ],

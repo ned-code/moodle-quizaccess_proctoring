@@ -40,9 +40,11 @@ $string['screenhtml'] = '
     <canvas id="canvas-screen" class="hidden"></canvas>
     <img id="photo-screen" alt="The picture will appear in this box." class="hidden"/>
     <span class="output-screen" class="hidden"></span>
-    <span id="log-screen" class="hidden"></span>
 ';
-$string['proctoringstatement'] = 'This exam requires screenshare and webcam access.<br />(Please share screen & allow webcam access).';
+$string['proctoringstatement'] = 'This exam requires webcam access.';
+$string['proctoringstatement_pls'] = '(Please, allow webcam access to continue)';
+$string['proctoringstatement_screenshare'] = 'This exam requires webcam access and screen share.';
+$string['proctoringstatement_screenshare_pls'] = '(Please, share your screen & allow webcam access to continue)';
 $string['camhtml'] = '
     <div class="camera"> 
         <video width="100" id="video">Video stream not available.</video>
@@ -69,14 +71,12 @@ $string['picturesusedreport'] = 'There are the pictures captured during the quiz
 $string['setting:proctoringreconfigureproctoring'] = 'Auto-configure Proctoring';
 $string['setting:proctoringreconfigureproctoring_desc'] = 'If enabled, users who navigate to the quiz take webcam pictures';
 
-
 $string['event:takescreenshot'] = 'Taken a screenshot';
 $string['event:screenshotcreated'] = 'A new screenshot was created';
 $string['event:screenshotupdated'] = 'Screenshot was updated';
 
-
 $string['privacy:metadata:courseid'] = 'The ID of the course that use proctoring.';
-$string['privacy:metadata:quizid'] = 'The ID of the Quiz that use proctoring.';
+$string['privacy:metadata:cmid'] = 'The ID of the course module that use proctoring.';
 $string['privacy:metadata:webcampicture'] = 'The name of picture that has been taken by the proctoring.';
 $string['privacy:metadata:status'] = 'The Status of the proctoring.';
 $string['timemodified'] = 'Last modified';
@@ -88,7 +88,6 @@ $string['proctoring:deletecamshots'] = 'Proctoring delete webcam photos';
 $string['proctoring:viewreport'] = 'Proctoring view report';
 $string['name'] = 'Student Name';
 $string['webcampicture'] = 'Captured Pictures';
-$string['openwebcam'] = 'Allow your webcam & share screen to continue';
 $string['privacy:quizaccess_proctoring_logs'] = 'QuizAccess Proctoring logs';
 $string['privacy:core_files'] = 'QuizAccess Proctoring webcam pictures';
 $string['privacy:metadata:core_files'] = 'The Quiz Access stores users picture which has been shot by the webcam during quiz attempt.';
@@ -116,14 +115,18 @@ $string['setting:fcthreshold'] = 'Face match threshold percentage.';
 $string['setting:fcthresholddesc'] = 'Face match threshold percentage.';
 
 $string['buttonlabel:deletebutton'] = 'Delete images';
+$string['cantattempt'] = 'Sorry, but you can\'t attempt the quiz.';
 $string['warning:cameraallowwarning'] = 'Please allow camera access.';
 $string['warning:sharescreen'] = 'Please share entire screen.';
 $string['warning:keepparentwindowopen'] = 'You need to keep the parent window open!';
-$string['warning:sorry:restartattempt'] = 'Sorry !! You need to restart the attempt as you have stopped the screenshare.';
+$string['warning:sorry:restartattempt'] = 'Sorry !! You need to restart the attempt as you have stopped the camera or screen share.';
 $string['warning:sorry:sharescreen'] = 'Sorry !! You need to share entire screen.';
 
 $string['error:requiresecure'] = 'Quiz requires secure connection (through the HTPPS)!';
 $string['error:takingimage'] = 'Something went wrong during taking the image';
+$string['error:localStorage'] = 'Your browser or its settings does not allow using Window.localStorage, so you will not to be able to continue.';
+$string['error:sharescreen'] = 'Your browser or its settings does not allow checking your share choice,  so you will not to be able to continue.';
+$string['error:unexpectederror'] = 'Sorry, there is some unexpected error.';
 
 $string['settingscontroll:save'] = 'Save Settings';
 $string['settingscontroll:deleteall'] = 'Purge All Proctoring Data';
@@ -139,7 +142,6 @@ $string['settings:fcheckquizstart_desc'] = 'Face ID validate on quiz start[If "y
 $string['settings:screenshareenable'] = 'Enable screenshare';
 $string['settings:screenshareenable_desc'] = 'Enable screenshare [If "yes" user screenshot will be sent with webcam picture].';
 
-
 $string['settings:enablescreenshot'] = 'Enable screenshot for quizes.';
 $string['settings:enablescreenshot_desc'] = 'Enable screenshot for quizes.';
 
@@ -152,11 +154,8 @@ $string['additionalsettingspagetitle'] = 'All proctoring logs';
 $string['execute_facematch_task'] = 'Execute facematch task';
 $string['initiate_facematch_task'] = 'Initiate facematch task';
 
-$string['modal:sharescreenstate'] = 'Share Screen State:';
-$string['modal:displaysurface'] = 'Display Surface:';
 $string['modal:facevalidation'] = 'Face Validated:';
 $string['modal:allowcamera'] = 'Allow your webcam';
 $string['modal:sharescreenbtn'] = 'Share screen';
-$string['modal:disabled'] = 'Disabled';
 $string['modal:pending'] = 'Pending';
 $string['modal:validateface'] = 'Validate Face Recognition';

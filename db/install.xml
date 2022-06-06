@@ -19,7 +19,7 @@
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="courseid"/>
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" SEQUENCE="false" COMMENT="Course id." PREVIOUS="id" NEXT="quizid"/>
-        <FIELD NAME="quizid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" SEQUENCE="false" COMMENT="Quiz id" PREVIOUS="courseid" NEXT="userid"/>
+        <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" SEQUENCE="false" COMMENT="CM id" PREVIOUS="courseid" NEXT="userid"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" DEFAULT="0" SEQUENCE="false" COMMENT="User who validate identity" PREVIOUS="quizid" NEXT="profilepicture"/>
         <FIELD NAME="webcampicture" TYPE="text" NOTNULL="true" UNSIGNED="false" SEQUENCE="false" COMMENT="Webcam photo used for validation purposes" PREVIOUS="profilepicture" NEXT="status"/>
         <FIELD NAME="status" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" COMMENT="Validation process status" PREVIOUS="webcampicture" NEXT="timemodified"/>
@@ -31,11 +31,11 @@
         <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="quizid"/>
       </KEYS>
     </TABLE>
-    <TABLE NAME="proctoring_screenshot_logs" COMMENT="Stores all screenshot">
+    <TABLE NAME="quizaccess_proctoring_screen" COMMENT="Stores all screenshot">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="courseid"/>
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" SEQUENCE="false" COMMENT="Course id." PREVIOUS="id" NEXT="quizid"/>
-        <FIELD NAME="quizid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" SEQUENCE="false" COMMENT="Quiz id" PREVIOUS="courseid" NEXT="userid"/>
+        <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" SEQUENCE="false" COMMENT="CM id" PREVIOUS="courseid" NEXT="userid"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" DEFAULT="0" SEQUENCE="false" COMMENT="User who validate identity" PREVIOUS="quizid" NEXT="screenshot"/>
         <FIELD NAME="screenshot" TYPE="text" NOTNULL="true" UNSIGNED="false" SEQUENCE="false" COMMENT="Webcam photo used for validation purposes" PREVIOUS="profilepicture" NEXT="status"/>
         <FIELD NAME="status" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" COMMENT="Validation process status" PREVIOUS="screenshot" NEXT="timemodified"/>
@@ -45,7 +45,7 @@
         <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="quizid"/>
       </KEYS>
     </TABLE>
-    <TABLE NAME="proctoring_facematch_task" COMMENT="Stores check face recognition task logs">
+    <TABLE NAME="quizaccess_proctoring_face" COMMENT="Stores check face recognition task logs">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="refimageurl"/>
         <FIELD NAME="refimageurl" TYPE="text" NOTNULL="true" UNSIGNED="false" SEQUENCE="false" COMMENT="Reference image url" PREVIOUS="id" NEXT="targetimageurl"/>
@@ -57,7 +57,7 @@
         <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="refimageurl"/>
       </KEYS>
     </TABLE>
-    <TABLE NAME="aws_api_log" COMMENT="Stores aws api call log">
+    <TABLE NAME="quizaccess_proctoring_aws" COMMENT="Stores aws api call log">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="reportid"/>
         <FIELD NAME="reportid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" DEFAULT="0" SEQUENCE="false" COMMENT="Report id" PREVIOUS="id" NEXT="apiresponse"/>
@@ -68,18 +68,17 @@
         <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="reportid"/>
       </KEYS>
     </TABLE>
-    <TABLE NAME="proctoring_fm_warnings" COMMENT="Stores face mismatch warnings">
+    <TABLE NAME="quizaccess_proctoring_warns" COMMENT="Stores face mismatch warnings">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="reportid"/>
         <FIELD NAME="reportid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" DEFAULT="0" SEQUENCE="false" COMMENT="Report id"/>
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" DEFAULT="0" SEQUENCE="false" COMMENT="Course id"/>
-        <FIELD NAME="quizid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" DEFAULT="0" SEQUENCE="false" COMMENT="Quiz id"/>
+        <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" DEFAULT="0" SEQUENCE="false" COMMENT="CM id"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="false" DEFAULT="0" SEQUENCE="false" COMMENT="User id"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="reportid"/>
       </KEYS>
     </TABLE>
-
   </TABLES>
 </XMLDB>

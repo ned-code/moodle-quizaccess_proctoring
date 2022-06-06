@@ -22,6 +22,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use quizaccess_proctoring\shared_lib as NED;
+
 class addtional_settings_helper {
     /**
      * Search for specific user proctoring log.
@@ -131,7 +133,7 @@ class addtional_settings_helper {
             ." e.userid as studentid, "
             ." e.webcampicture as webcampicture, "
             ." e.status as status, "
-            ." e.quizid as quizid, "
+            ." e.cmid as cmid, "
             ." e.courseid as courseid, "
             ." e.timemodified as timemodified, "
             ." u.firstname as firstname, "
@@ -139,10 +141,10 @@ class addtional_settings_helper {
             ." u.email as email, "
             ." c.fullname as coursename, "
             ." q.name as quizname "
-            ." from  {quizaccess_proctoring_logs} e "
+            ." FROM {".NED::TABLE_LOG."} e "
             ." INNER JOIN {user} u  ON u.id = e.userid "
             ." INNER JOIN {course} c  ON c.id = e.courseid "
-            ." INNER JOIN {course_modules} cm  ON cm.id = e.quizid "
+            ." INNER JOIN {course_modules} cm  ON cm.id = e.cmid "
             ." INNER JOIN {quiz} q  ON q.id = cm.instance "
             ." WHERE $whereclause ";
 
@@ -159,7 +161,7 @@ class addtional_settings_helper {
     public function searchbycourseid ($courseid) {
         global $DB;
         $sql = "SELECT *
-            from  {quizaccess_proctoring_logs} e
+            FROM {".NED::TABLE_LOG."} e
             WHERE e.courseid = :courseid";
         $params = array();
         $params['courseid'] = $courseid;
@@ -170,16 +172,16 @@ class addtional_settings_helper {
     /**
      * search by quiz id.
      *
-     * @param int $quizid The id of the quiz.
+     * @param int $cmid The id of the course module.
      * @return array
      */
-    public function searchbyquizid ($quizid) {
+    public function search_by_cmid ($cmid) {
         global $DB;
         $sql = "SELECT *
-            from  {quizaccess_proctoring_logs} e
-            WHERE e.quizid = :quizid";
+            FROM {".NED::TABLE_LOG."} e
+            WHERE e.cmid = :cmid";
         $params = array();
-        $params['quizid'] = $quizid;
+        $params['cmid'] = $cmid;
         $sqlexecuted = $DB->get_recordset_sql($sql, $params);
         return $sqlexecuted;
     }
@@ -197,7 +199,7 @@ class addtional_settings_helper {
         e.userid as studentid,
         e.webcampicture as webcampicture,
         e.status as status,
-        e.quizid as quizid,
+        e.cmid as cmid,
         e.courseid as courseid,
         e.timemodified as timemodified,
         u.firstname as firstname,
@@ -205,10 +207,10 @@ class addtional_settings_helper {
         u.email as email,
         c.fullname as coursename,
         q.name as quizname
-        from  {quizaccess_proctoring_logs} e
+        FROM {".NED::TABLE_LOG."} e
         INNER JOIN {user} u  ON u.id = e.userid
         INNER JOIN {course} c  ON c.id = e.courseid
-        INNER JOIN {course_modules} cm  ON cm.id = e.quizid
+        INNER JOIN {course_modules} cm  ON cm.id = e.cmid
         INNER JOIN {quiz} q  ON q.id = cm.instance";
 
         // Prepare data.
@@ -228,25 +230,22 @@ class addtional_settings_helper {
         if (count($deleteids) > 0) {
             // Get report rows.
             list($insql, $inparams) = $DB->get_in_or_equal($deleteids);
-            $sql = "SELECT * FROM {quizaccess_proctoring_logs} WHERE id $insql";
-            $logs = $DB->get_records_sql($sql, $inparams);
+            $logs = $DB->get_records_select(NED::TABLE_LOG, "id $insql", $inparams);
             foreach ($logs as $row) {
                 $id = $row->id;
                 $fileurl = $row->webcampicture;
                 $patharray = explode("/", $fileurl);
                 $filename = end($patharray);
 
-                $DB->delete_records('proctoring_fm_warnings', array('reportid' => $id));
-                $DB->delete_records('quizaccess_proctoring_logs', array('id' => $id));
+                $DB->delete_records(NED::TABLE_WARNINGS, ['reportid' => $id]);
+                $DB->delete_records(NED::TABLE_LOG, ['id' => $id]);
 
-                $filesql = "SELECT * FROM {files}
-                        WHERE
-                        component = 'quizaccess_proctoring'
-                        AND filearea = 'picture'
-                        AND filename = :filename";
-                $params = array();
-                $params["filename"] = $filename;
-                $usersfiles = $DB->get_records_sql($filesql, $params);
+                $params = [
+                    'component' => NED::PLUGIN_NAME,
+                    'filearea' => 'picture',
+                    'filename' => $filename,
+                ];
+                $usersfiles = $DB->get_records('files', $params);
                 foreach ($usersfiles as $row) {
                     $this->deletefile($row);
                 }
@@ -287,31 +286,17 @@ class addtional_settings_helper {
      * @return array
      */
     public function searchssbycourseid ($courseid) {
-        global $DB;
-        $sql = "SELECT *
-            from  {proctoring_screenshot_logs} e
-            WHERE e.courseid = :courseid";
-        $params = array();
-        $params['courseid'] = $courseid;
-        $sqlexecuted = $DB->get_recordset_sql($sql, $params);
-        return $sqlexecuted;
+        return NED::db()->get_records(NED::TABLE_SCREENSHOT, ['courseid' => $courseid]);
     }
 
     /**
-     * search by quiz id.
+     * search by cm id.
      *
-     * @param int $quizid The id of the quiz.
+     * @param int $cmid The id of the course module.
      * @return array
      */
-    public function searchssbyquizid ($quizid) {
-        global $DB;
-        $sql = "SELECT *
-            from  {proctoring_screenshot_logs} e
-            WHERE e.quizid = :quizid";
-        $params = array();
-        $params['quizid'] = $quizid;
-        $sqlexecuted = $DB->get_recordset_sql($sql, $params);
-        return $sqlexecuted;
+    public function search_ss_by_cmid ($cmid) {
+        return NED::db()->get_records(NED::TABLE_SCREENSHOT, ['cmid' => $cmid]);
     }
 
 
@@ -327,23 +312,21 @@ class addtional_settings_helper {
         if (count($deleteids) > 0) {
             // Get report rows.
             list($insql, $inparams) = $DB->get_in_or_equal($deleteids);
-            $sql = "SELECT * FROM {proctoring_screenshot_logs} WHERE id $insql";
-            $logs = $DB->get_records_sql($sql, $inparams);
+            $logs = NED::db()->get_records_select(NED::TABLE_SCREENSHOT, "id $insql", $inparams);
+
             foreach ($logs as $row) {
                 $id = $row->id;
                 $fileurl = $row->screenshot;
                 $patharray = explode("/", $fileurl);
                 $filename = end($patharray);
 
-                $DB->delete_records('proctoring_screenshot_logs', array('id' => $id));
-                $filesql = 'SELECT * FROM {files}
-                        WHERE
-                        component = "quizaccess_proctoring"
-                        AND filearea = "picture"
-                        AND filename = :filename';
-                $params = array();
-                $params["filename"] = $filename;
-                $usersfiles = $DB->get_records_sql($filesql, $params);
+                $DB->delete_records(NED::TABLE_SCREENSHOT, ['id' => $id]);
+                $params = [
+                    'component' => NED::PLUGIN_NAME,
+                    'filearea' => 'picture',
+                    'filename' => $filename,
+                ];
+                $usersfiles = $DB->get_records('files', $params);
                 foreach ($usersfiles as $row) {
                     $this->deletefile($row);
                 }

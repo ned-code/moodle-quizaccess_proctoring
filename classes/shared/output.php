@@ -380,13 +380,20 @@ trait output {
      */
     static public function img($filename, $class='icon', $plugin='moodle', $attr=[], $alt=null){
         $plugin = $plugin ?? static::$PLUGIN_NAME;
-        $url = static::$PLUGIN_URL.'/pix/'.$filename;
-        if (!file_exists(static::$DIRROOT . $url)){
-            if (file_exists(static::$DIRROOT . $filename)){
-                $url = $filename;
-            } else {
-                $url = static::O()->image_url($filename, $plugin);
+        if ($filename instanceof \moodle_url){
+            $url = $filename;
+        } elseif (is_string($filename) && static::str_starts_with($filename,['http://', 'https://'])) {
+            $url = new \moodle_url($filename);
+        } else {
+            $url = static::$PLUGIN_URL.'/pix/'.$filename;
+            if (!file_exists(static::$DIRROOT . $url)){
+                if (file_exists(static::$DIRROOT . $filename)){
+                    $url = $filename;
+                } else {
+                    $url = static::O()->image_url($filename, $plugin);
+                }
             }
+            $url = new \moodle_url($url);
         }
 
         $attr['class'] = static::arr2str($class, $attr['class'] ?? '');
@@ -395,7 +402,7 @@ trait output {
             $attr['title'] = $alt;
         }
 
-        return \html_writer::img(new \moodle_url($url), $alt, $attr);
+        return \html_writer::img($url, $alt, $attr);
     }
 
     /**

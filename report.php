@@ -22,6 +22,7 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later.
  */
 
+use quizaccess_proctoring\shared_lib as NED;
 
 require_once(__DIR__ . '/../../../../config.php');
 require_once($CFG->dirroot.'/mod/quiz/accessrule/proctoring/lib.php');
@@ -65,11 +66,11 @@ $url = new moodle_url(
 
 $PAGE->set_url($url);
 $PAGE->set_pagelayout('course');
-$PAGE->set_title($COURSE->shortname . ': ' . get_string('pluginname', 'quizaccess_proctoring'));
-$PAGE->set_heading($COURSE->fullname . ': ' . get_string('pluginname', 'quizaccess_proctoring'));
+$plugin_name = NED::str('pluginname');
+$PAGE->set_title($COURSE->shortname . ': ' . $plugin_name);
+$PAGE->set_heading($COURSE->fullname . ': ' . $plugin_name);
 
-$PAGE->navbar->add(get_string('quizaccess_proctoring', 'quizaccess_proctoring'), $url);
-
+$PAGE->navbar->add(NED::str('quizaccess_proctoring'), $url);
 $PAGE->requires->js_call_amd( 'quizaccess_proctoring/lightbox2');
 
 
@@ -119,9 +120,10 @@ if (has_capability('quizaccess/proctoring:deletecamshots', $context, $USER->id)
     && $reportid != null
     && !empty($logaction)
 ) {
-    $DB->delete_records('quizaccess_proctoring_logs', array('courseid' => $courseid, 'quizid' => $cmid, 'userid' => $studentid));
-    $DB->delete_records('proctoring_screenshot_logs', array('courseid' => $courseid, 'quizid' => $cmid, 'userid' => $studentid));
-    $DB->delete_records('proctoring_fm_warnings', array('courseid' => $courseid, 'quizid' => $cmid, 'userid' => $studentid));
+    $params = ['courseid' => $courseid, 'cmid' => $cmid, 'userid' => $studentid];
+    $DB->delete_records(NED::TABLE_LOG, $params);
+    $DB->delete_records(NED::TABLE_SCREENSHOT, $params);
+    $DB->delete_records(NED::TABLE_WARNINGS, $params);
     // Delete users file (webcam images).
     $filesql = 'SELECT * FROM {files}
     WHERE userid = :studentid  AND contextid = :contextid  AND component = \'quizaccess_proctoring\' AND filearea = \'picture\'';
@@ -163,15 +165,18 @@ if (has_capability('quizaccess/proctoring:deletecamshots', $context, $USER->id)
 }
 echo $OUTPUT->header();
 echo '<div id="main">
-<h2>' . get_string('eprotroringreports', 'quizaccess_proctoring') . '' . $quiz->name . '</h2>'.'
+<h2>' . NED::str('eprotroringreports') . '' . $quiz->name . '</h2>'.'
 <br/><br/><div style="float: left">'.$searchform.'</div>'.'<div style="float: right">'.$settingsbtn.$logbtn.'</div><br/><br/>
 <div class="box generalbox m-b-1 adminerror alert alert-info p-y-1">'
-    . get_string('eprotroringreportsdesc', 'quizaccess_proctoring') . '</div>
+    . NED::str('eprotroringreportsdesc') . '</div>
 ';
 if (
     has_capability('quizaccess/proctoring:viewreport', $context, $USER->id) &&
     $cmid != null &&
     $courseid != null) {
+
+    $table = NED::TABLE_LOG;
+    $table_warnings = NED::TABLE_WARNINGS;
 
     // Check if report if for some user.
     if ($studentid != null && $cmid != null && $courseid != null && $reportid != null) {
@@ -180,10 +185,10 @@ if (
          . " e.status as status, "
          ." e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, "
          ." u.email as email, pfw.reportid as warningid "
-         ." from  {quizaccess_proctoring_logs} e INNER JOIN {user} u  ON u.id = e.userid "
-         ." LEFT JOIN {proctoring_fm_warnings} pfw ON e.courseid = pfw.courseid "
-         ." AND e.quizid = pfw.quizid AND e.userid = pfw.userid "
-         ." WHERE e.courseid = '$courseid' AND e.quizid = '$cmid' AND u.id = '$studentid' AND e.id = '$reportid' ";
+         ." FROM  {{$table}} e INNER JOIN {user} u  ON u.id = e.userid "
+         ." LEFT JOIN {{$table_warnings}} pfw ON e.courseid = pfw.courseid "
+         ." AND e.cmid = pfw.cmid AND e.userid = pfw.userid "
+         ." WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.id = '$reportid' ";
     }
 
     if ($studentid == null && $cmid != null && $courseid != null) {
@@ -192,10 +197,10 @@ if (
                 ." u.email as email,pfw.reportid as warningid, max(e.webcampicture) as webcampicture, "
                 ." max(e.id) as reportid, max(e.status) as status, "
                 ." max(e.timemodified) as timemodified "
-                ." from  {quizaccess_proctoring_logs} e INNER JOIN {user} u ON u.id = e.userid "
-                ." LEFT JOIN {proctoring_fm_warnings} pfw ON e.courseid = pfw.courseid AND e.quizid = pfw.quizid "
+                ." FROM  {{$table}} e INNER JOIN {user} u ON u.id = e.userid "
+                ." LEFT JOIN {{$table_warnings}} pfw ON e.courseid = pfw.courseid AND e.cmid = pfw.cmid "
                 ." AND e.userid = pfw.userid "
-                ." WHERE e.courseid = '$courseid' AND e.quizid = '$cmid' "
+                ." WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' "
                 ." group by e.userid, u.firstname, u.lastname, u.email, pfw.reportid ";
     }
 
@@ -205,10 +210,10 @@ if (
                 ." u.email as email, pfw.reportid as warningid, max(e.webcampicture) as webcampicture, "
                 ." max(e.id) as reportid, max(e.status) as status, "
                 ." max(e.timemodified) as timemodified "
-                ." from  {quizaccess_proctoring_logs} e INNER JOIN {user} u ON u.id = e.userid "
-                ." LEFT JOIN {proctoring_fm_warnings} pfw ON e.courseid = pfw.courseid "
-                ." AND e.quizid = pfw.quizid AND e.userid = pfw.userid "
-                ." WHERE e.courseid = '$courseid' AND e.quizid = '$cmid' "
+                ." FROM  {{$table}} e INNER JOIN {user} u ON u.id = e.userid "
+                ." LEFT JOIN {{$table_warnings}} pfw ON e.courseid = pfw.courseid "
+                ." AND e.cmid = pfw.cmid AND e.userid = pfw.userid "
+                ." WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' "
                 ." group by e.userid, u.firstname, u.lastname, u.email, pfw.reportid ";
     }
 
@@ -218,14 +223,14 @@ if (
                 ." u.email as email, pfw.reportid as warningid, max(e.webcampicture) as webcampicture, "
                 ." max(e.id) as reportid, max(e.status) as status, "
                 ." max(e.timemodified) as timemodified "
-                ." from  {quizaccess_proctoring_logs} e INNER JOIN {user} u ON u.id = e.userid "
-                ." LEFT JOIN {proctoring_fm_warnings} pfw ON e.courseid = pfw.courseid AND "
-                ." e.quizid = pfw.quizid AND e.userid = pfw.userid "
+                ." FROM  {{$table}} e INNER JOIN {user} u ON u.id = e.userid "
+                ." LEFT JOIN {{$table_warnings}} pfw ON e.courseid = pfw.courseid AND "
+                ." e.cmid = pfw.cmid AND e.userid = pfw.userid "
                 ." WHERE "
-                ." (e.courseid = '$courseid' AND e.quizid = '$cmid' AND "
+                ." (e.courseid = '$courseid' AND e.cmid = '$cmid' AND "
                 .$DB->sql_like('u.firstname', ':firstnamelike', false).") OR "
-              ." (e.courseid = '$courseid' AND e.quizid = '$cmid' AND ".$DB->sql_like('u.email', ':emaillike', false).") OR "
-            ." (e.courseid = '$courseid' AND e.quizid = '$cmid' AND ".$DB->sql_like('u.lastname', ':lastnamelike', false)
+              ." (e.courseid = '$courseid' AND e.cmid = '$cmid' AND ".$DB->sql_like('u.email', ':emaillike', false).") OR "
+            ." (e.courseid = '$courseid' AND e.cmid = '$cmid' AND ".$DB->sql_like('u.lastname', ':lastnamelike', false)
             ." )group by e.userid, u.firstname, u.lastname, u.email, pfw.reportid"; // False = not case sensitive.
     }
 
@@ -237,9 +242,9 @@ if (
         array(
             get_string('user'),
             get_string('email'),
-            get_string('dateverified', 'quizaccess_proctoring'),
-            get_string('warninglabel', 'quizaccess_proctoring'),
-            get_string('actions', 'quizaccess_proctoring')
+            NED::str('dateverified'),
+            NED::str('warninglabel'),
+            NED::str('actions'),
         )
     );
     $table->define_baseurl($url);
@@ -266,20 +271,15 @@ if (
         $data[] = $info->email;
 
         $data[] = date("Y/M/d H:m:s", $info->timemodified);
-
-        if ($info->warningid == "") {
-            $data[] = '<i class="icon fa fa-check fa-fw " style="color: green"></i>';
-        } else {
-            $data[] = '<i class="icon fa fa-exclamation fa-fw " style="color: red"></i>';
-        }
+        $data[] = NED::fa('fa-fw '. ($info->warningid == "" ? 'fa-check green' : 'fa-exclamation red'));
 
         $con = "return confirm('Are you sure want to delete the pictures?');";
         $btn = '<a onclick="'. $con .'" href="?courseid=' . $courseid .
-            '&quizid=' . $cmid . '&cmid=' . $cmid . '&studentid=' . $info->studentid .
+            '&cmid=' . $cmid . '&studentid=' . $info->studentid .
             '&reportid=' . $info->reportid . '&logaction=delete"><i class="icon fa fa-trash fa-fw "></i></a>';
 
         $data[] = '<a href="?courseid=' . $courseid .
-            '&quizid=' . $cmid . '&cmid=' . $cmid . '&studentid=' . $info->studentid . '&reportid=' . $info->reportid . '">' .
+            '&cmid=' . $cmid . '&studentid=' . $info->studentid . '&reportid=' . $info->reportid . '">' .
             '<i class="icon fa fa-folder-o fa-fw "></i>' . '</a>
             '.$btn;
 
@@ -292,73 +292,50 @@ if (
     if ($studentid != null && $cmid != null && $courseid != null && $reportid != null) {
 
         $data = array();
+        $table = NED::TABLE_LOG;
         $sql = "SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status,
         e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email, e.awsscore, e.awsflag
-        from {quizaccess_proctoring_logs} e INNER JOIN {user} u  ON u.id = e.userid
-        WHERE e.courseid = '$courseid' AND e.quizid = '$cmid' AND u.id = '$studentid'";
+        FROM {{$table}} e INNER JOIN {user} u  ON u.id = e.userid
+        WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid'";
 
         $sqlexecuted = $DB->get_recordset_sql($sql);
-        echo '<h3>' . get_string('picturesusedreport', 'quizaccess_proctoring') . '</h3>';
+        echo '<h3>' . NED::str('picturesusedreport') . '</h3>';
 
         $tablepictures = new flexible_table('proctoring-report-pictures' . $COURSE->id . '-' . $cmid);
+        $columns = [
+            NED::str('name'),
+            NED::str('webcampicture'),
+            NED::str('screenshots'),
+        ];
 
-        $tablepictures->define_columns(
-            array(
-                get_string('name', 'quizaccess_proctoring'),
-                get_string('webcampicture', 'quizaccess_proctoring'),
-                'Screenshots'
-            )
-        );
-        $tablepictures->define_headers(
-            array(
-                get_string('name', 'quizaccess_proctoring'),
-                get_string('webcampicture', 'quizaccess_proctoring'),
-                get_string('screenshots', 'quizaccess_proctoring')
-            )
-        );
+        $tablepictures->define_columns($columns);
+        $tablepictures->define_headers($columns);
         $tablepictures->define_baseurl($url);
 
         $tablepictures->set_attribute('cellpadding', '2');
         $tablepictures->set_attribute('class', 'generaltable generalbox reporttable');
 
         $tablepictures->setup();
-        $pictures = '';
+        $pictures = [];
 
         $user = core_user::get_user($studentid);
-        $thresholdvalue = (int) get_proctoring_settings('awsfcthreshold');
+        $thresholdvalue = (int)NED::get_config('awsfcthreshold');
 
         foreach ($sqlexecuted as $info) {
-            $d = basename($info->webcampicture, '.png');
-            $imgid = "reportid-".$info->reportid;
+            if (empty($info->webcampicture)) continue;
 
-            if ($info->awsflag == 2 && $info->awsscore > $thresholdvalue) {
-                $pictures .= $info->webcampicture
-                    ? '<a href="' . $info->webcampicture . '" data-lightbox="procImages"' .
-                    ' data-title ="' . $info->firstname . ' '
-                    . $info->lastname .'">'.
-                    '<img id="'.$imgid.'" style="border: 5px solid green" width="100" src="'
-                    . $info->webcampicture . '" alt="' . $info->firstname . ' '
-                    . $info->lastname . '" data-lightbox="' . basename($info->webcampicture, '.png') .'"/>
-                   </a>'
-                    : '';
-            } else if ($info->awsflag == 2 && $info->awsscore < $thresholdvalue) {
-                $pictures .= $info->webcampicture
-                    ? '<a href="' . $info->webcampicture . '" data-lightbox="procImages"' .
-                    ' data-title ="' . $info->firstname . ' ' . $info->lastname .'">'.
-                    '<img id="'.$imgid.'" style="border: 5px solid red" width="100" src="'
-                    . $info->webcampicture . '" alt="' . $info->firstname . ' '
-                    . $info->lastname . '" data-lightbox="' . basename($info->webcampicture, '.png') .'"/>
-                   </a>'
-                    : '';
-            } else {
-                $pictures .= $info->webcampicture
-                    ? '<a href="' . $info->webcampicture . '" data-lightbox="procImages"' .
-                    ' data-title ="' . $info->firstname . ' ' . $info->lastname .'">'.
-                    '<img id="'.$imgid.'" width="100" src="' . $info->webcampicture . '" alt="' . $info->firstname . ' '
-                    . $info->lastname . '" data-lightbox="' . basename($info->webcampicture, '.png') .'"/>
-                   </a>'
-                    : '';
+            $fname = basename($info->webcampicture, '.png');
+            $imgid = "reportid-".$info->reportid;
+            $url = new \moodle_url($info->webcampicture);
+            $username = $info->firstname.' '.$info->lastname;
+            $classes = [];
+            if (!empty($info->awsflag) && $info->awsflag == 2){
+                $classes[] = 'face-match';
+                $classes[] = 'face-match-' . ($info->awsscore >= $thresholdvalue ? 'high' : 'low');
             }
+
+            $img = NED::img($url, $classes, null, ['id' => $imgid, 'data-lightbox' => $fname], $username);
+            $pictures[] = NED::link($url, $img, 'proctoring-pictures', ['data-lightbox' => 'procImages', 'data-title' => $username]);
         }
 
         $analyzeparam = array('studentid' => $studentid, 'cmid' => $cmid, 'courseid' => $courseid, 'reportid' => $reportid);
@@ -378,6 +355,7 @@ if (
                         </tr>
                     </table>';
 
+        $table = NED::TABLE_SCREENSHOT;
         $sqlscreenshot = " SELECT "
                         ." e.id as reportid, "
                         ." e.userid as studentid, "
@@ -387,28 +365,29 @@ if (
                         ." u.firstname as firstname, "
                         ." u.lastname as lastname, "
                         ." u.email as email "
-                        ." from {proctoring_screenshot_logs} e "
+                        ." FROM {{$table}} e "
                         ." INNER JOIN {user} u  ON u.id = e.userid "
                         ." WHERE e.courseid = '$courseid' "
-                        ." AND e.quizid = '$cmid' "
+                        ." AND e.cmid = '$cmid' "
                         ." AND u.id = '$studentid' ";
         $screenshots = $DB->get_recordset_sql($sqlscreenshot);
-        $screenshottaken = "";
+        $screenshottaken = [];
         foreach ($screenshots as $info) {
-            $d = basename($info->screenshot, '.png');
-            $screenshottaken .= $info->screenshot
-                ? '<a href="' . $info->screenshot . '" data-lightbox="procImages"' .
-                ' data-title ="' . $info->firstname . ' ' . $info->lastname .'">'.
-                '<img width="100" src="' . $info->screenshot . '" alt="' . $info->firstname . ' '
-                . $info->lastname . '" data-lightbox="' . basename($info->screenshot, '.png') .'"/>
-                   </a>'
-                : '';
+            if (empty($info->screenshot)) continue;
+
+            $fname = basename($info->screenshot, '.png');
+            $imgid = "reportid-".$info->reportid;
+            $url = new \moodle_url($info->screenshot);
+            $username = $info->firstname.' '.$info->lastname;
+
+            $img = NED::img($url, '', null, ['id' => $imgid, 'data-lightbox' => $fname], $username);
+            $screenshottaken[] = NED::link($url, $img, 'proctoring-pictures', ['data-lightbox' => 'procImages', 'data-title' => $username]);
         }
 
         $datapictures = array(
             $userinfo,
-            $pictures,
-            $screenshottaken
+            join("\n", $pictures),
+            join("\n", $screenshottaken),
         );
         $tablepictures->add_data($datapictures);
         $tablepictures->finish_html();
@@ -416,8 +395,7 @@ if (
 
 } else {
     // User has not permissions to view this page.
-    echo '<div class="box generalbox m-b-1 adminerror alert alert-danger p-y-1">' .
-        get_string('notpermissionreport', 'quizaccess_proctoring') . '</div>';
+    NED::ediv(NED::str('notpermissionreport'), 'box generalbox m-b-1 adminerror alert alert-danger p-y-1');
 }
 echo '</div>';
 echo $OUTPUT->footer();

@@ -42,6 +42,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+use quizaccess_proctoring\shared_lib as NED;
+
 /**
  * Main upgrade tasks to be executed on Moodle version bump
  *
@@ -98,7 +100,7 @@ function xmldb_quizaccess_proctoring_upgrade($oldversion) {
 
     if ($oldversion < 2021061102) {
         // Define field output to be added to task_log.
-        $table = new xmldb_table('quizaccess_proctoring_logs');
+        $table = new xmldb_table(NED::TABLE_LOG);
         $field1 = new xmldb_field('awsscore', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
         $field2 = new xmldb_field('awsflag', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
 
@@ -116,7 +118,7 @@ function xmldb_quizaccess_proctoring_upgrade($oldversion) {
 
     if ($oldversion < 2021061104) {
         // Define field output to be added to task_log.
-        $table = new xmldb_table('proctoring_facematch_task');
+        $table = new xmldb_table(NED::TABLE_FACEMATCH);
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, true, true, null, null);
         $table->add_field('refimageurl', XMLDB_TYPE_TEXT, '500', null, true, false, null, null);
         $table->add_field('targetimageurl', XMLDB_TYPE_TEXT, '500', null, true, false, null, null);
@@ -132,10 +134,10 @@ function xmldb_quizaccess_proctoring_upgrade($oldversion) {
 
     if ($oldversion < 2021061106) {
         // Define field output to be added to task_log.
-        $table = new xmldb_table('proctoring_screenshot_logs');
+        $table = new xmldb_table(NED::TABLE_SCREENSHOT);
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, true, true, null, null);
         $table->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
-        $table->add_field('quizid', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
+        $table->add_field('cmid', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
         $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
         $table->add_field('screenshot', XMLDB_TYPE_TEXT, '10', null, true, false, null, null);
         $table->add_field('status', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
@@ -143,12 +145,16 @@ function xmldb_quizaccess_proctoring_upgrade($oldversion) {
 
         $table->add_key('id', XMLDB_KEY_PRIMARY, array('id'));
 
+        if (!$dbman->table_exists($table)){
+            $dbman->create_table($table);
+        }
+
         $plugin_savepoint(2021061106);
     }
 
     if ($oldversion < 2021070702) {
         // Define field output to be added to task_log.
-        $table = new xmldb_table('aws_api_log');
+        $table = new xmldb_table(NED::TABLE_AWS);
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, true, true, null, null);
         $table->add_field('reportid', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
         $table->add_field('apiresponse', XMLDB_TYPE_TEXT, '1000', null, true, false, null, null);
@@ -165,11 +171,11 @@ function xmldb_quizaccess_proctoring_upgrade($oldversion) {
 
     if ($oldversion < 2021071405) {
         // Define field output to be added to task_log.
-        $table = new xmldb_table('proctoring_fm_warnings');
+        $table = new xmldb_table(NED::TABLE_WARNINGS);
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, true, true, null, null);
         $table->add_field('reportid', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
         $table->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
-        $table->add_field('quizid', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
+        $table->add_field('cmid', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
         $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
 
         $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
@@ -206,6 +212,34 @@ function xmldb_quizaccess_proctoring_upgrade($oldversion) {
         }
 
         $plugin_savepoint(2022042903);
+    }
+
+    if ($oldversion < 2022060600){
+        $rename_tables = [
+            'proctoring_screenshot_logs' => NED::TABLE_SCREENSHOT,
+            'proctoring_fm_warnings' => NED::TABLE_WARNINGS,
+            'proctoring_facematch_task' => NED::TABLE_FACEMATCH,
+            'aws_api_log' => NED::TABLE_AWS,
+        ];
+        foreach ($rename_tables as $old_name => $new_name){
+            if ($old_name == $new_name) continue;
+            if (!$dbman->table_exists($old_name) || $dbman->table_exists($new_name)) continue;
+
+            $table = new xmldb_table($old_name);
+            $dbman->rename_table($table, $new_name);
+        }
+
+        $tables_rename_quizid = [NED::TABLE_LOG, NED::TABLE_SCREENSHOT, NED::TABLE_WARNINGS];
+        $old_field_name = 'quizid';
+        foreach ($tables_rename_quizid as $table_name){
+            if (!$dbman->table_exists($table_name) || !$dbman->field_exists($table_name, $old_field_name)) continue;
+
+            $table = new xmldb_table($table_name);
+            $field = new xmldb_field($old_field_name, XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
+            $dbman->rename_field($table, $field, 'cmid');
+        }
+
+        $plugin_savepoint(2022060600);
     }
 
     return true;

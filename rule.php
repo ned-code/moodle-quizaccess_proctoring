@@ -73,6 +73,7 @@ class quizaccess_proctoring extends quiz_access_rule_base
      * @param mod_quiz_preflight_check_form $quizform
      *
      * @return array
+     * @noinspection PhpUnusedParameterInspection
      */
     public function get_courseid_cmid_from_preflight_form(mod_quiz_preflight_check_form $quizform) {
         $response = array();
@@ -88,13 +89,15 @@ class quizaccess_proctoring extends quiz_access_rule_base
      * @param $faceidcheck
      *
      * @return string
+     * @noinspection PhpUnusedParameterInspection
      */
     public function make_modal_content($quizform, $enablescreenshare, $faceidcheck) {
         if (!NED::is_secure()) return NED::div(NED::str('error:requiresecure'), 'error');
 
         $rows = [];
-        $rows[] = NED::d_row_col(NED::str('openwebcam'));
-        $rows[] = NED::d_row_col(NED::str('proctoringstatement'));
+        $statement_key = 'proctoringstatement' . ($enablescreenshare ? '_screenshare' : '');
+        $rows[] = NED::d_row_col(NED::str($statement_key));
+        $rows[] = NED::d_row_col(NED::str($statement_key.'_pls'));
         $last_row = [];
         $last_row[] = NED::d_col(NED::str('camhtml'));
         if ($enablescreenshare){
@@ -118,7 +121,9 @@ class quizaccess_proctoring extends quiz_access_rule_base
      *      otherwise null.
      */
     public function add_preflight_check_form_fields(mod_quiz_preflight_check_form $quizform, MoodleQuickForm $mform, $attemptid) {
-        global $USER;
+        NED::page()->add_body_class('quizaccess_proctoring');
+        $mform->_attributes['class'] = 'mform quizaccess_proctoring_preflight_form';
+
         if (!NED::is_secure()){
             $mform->addElement('html', NED::div(NED::str('error:requiresecure'), 'error'));
             $mform->hideIf('submitbutton', 'cmid', 'neq', '0');
@@ -149,36 +154,23 @@ class quizaccess_proctoring extends quiz_access_rule_base
         $faceidcheck = NED::cfg_faceidcheck();
         $enablescreenshare = NED::cfg_enablescreenshare();
 
-        $examurl = new moodle_url('/mod/quiz/startattempt.php');
         $record = new \stdClass();
         $record->id = 0;
         $record->courseid = (int)$coursedata['courseid'];
         $record->cmid = (int)$coursedata['cmid'];
         $record->attemptid = $attemptid;
-        $record->screenshotinterval = $camshotdelay;
+        $record->camshotdelay = $camshotdelay;
         $record->enablescreenshare = $enablescreenshare;
-        $record->examurl = $examurl->out(false);
+        $record->faceidcheck = $faceidcheck;
 
-        NED::js_call_amd('startAttempt', 'setupAttempt', $record);
+        NED::js_call_amd('startAttempt', 'setupBeforeAttempt', $record);
 
-        $mform->addElement('html', "<div class='quiz-check-form quizaccess_proctoring'>");
+        $mform->addElement('html', "<div class='quiz-check-form quizaccess-proctoring-form'>");
         if ($enablescreenshare) {
             $attributesarray = $mform->_attributes;
             $attributesarray['target'] = '_blank';
             $mform->_attributes = $attributesarray;
         }
-
-        $profileimageurl = "";
-        if ($USER->picture) {
-            $profileimageurl = new moodle_url('/user/pix.php/'.$USER->id.'/f1.jpg');
-        }
-        $coursedata = $this->get_courseid_cmid_from_preflight_form($quizform);
-        $hiddenvalue = "<input id='window_surface' value='' type='hidden'/>
-                        <input id='share_state' value='' type='hidden'/>
-                        <input id='screen_off_flag' value='0' type='hidden'/>".
-                        '<input type="hidden" id="courseidval" value="'.$coursedata['courseid'].'"/>
-                        <input type="hidden" id="cmidval" value="'.$coursedata['cmid'].'"/>
-                        <input type="hidden" id="profileimage" value="'.$profileimageurl.'"/>';
 
         $modalcontent = $this->make_modal_content($quizform, $enablescreenshare, $faceidcheck);
 
@@ -186,8 +178,6 @@ class quizaccess_proctoring extends quiz_access_rule_base
         $actionbtns[] = $button('allow_camera_btn', 'modal:allowcamera');
         if ($enablescreenshare){
             $actionbtns[] = $button('share_screen_btn', 'modal:sharescreenbtn');
-            $actionbtns[] = $dspan('share_screen_status', 'modal:disabled', 'modal:sharescreenstate');
-            $actionbtns[] = $dspan('display_surface', '', 'modal:displaysurface');
             if ($faceidcheck) {
                 $actionbtns[] = $dspan('face_validation_result','modal:pending','modal:facevalidation');
             }
@@ -200,18 +190,8 @@ class quizaccess_proctoring extends quiz_access_rule_base
         $actionbtnhtml = NED::d_container(NED::d_row_col($actionbtns));
         $mform->addElement('html', $modalcontent);
         $mform->addElement('static', 'actionbtns', '', $actionbtnhtml);
-
-        if ($faceidcheck || $enablescreenshare) {
-            $mform->addElement('html', '<div id="form_activate" style="visibility: hidden">');
-        }
-        $mform->addElement('checkbox', 'proctoring', '', NED::str('proctoringlabel'));
-        if ($faceidcheck || $enablescreenshare) {
-            $mform->addElement('html', '</div>');
-        }
-
-        $mform->addElement('html', $hiddenvalue);
+        $mform->addElement('checkbox', 'proctoring_checkbox', '', NED::str('proctoringlabel'));
         $mform->addElement('html', "</div>");
-
     }
 
     /**
@@ -287,11 +267,11 @@ class quizaccess_proctoring extends quiz_access_rule_base
         if (empty($quiz->proctoringrequired)){
             static::delete_settings($quiz);
         } else {
-            if (!$DB->record_exists(NED::$PLUGIN_NAME, ['quizid' => $quiz->id])) {
+            if (!$DB->record_exists(NED::TABLE_QP, ['quizid' => $quiz->id])) {
                 $record = new stdClass();
                 $record->quizid = $quiz->id;
                 $record->proctoringrequired = 1;
-                $DB->insert_record(NED::$PLUGIN_NAME, $record);
+                $DB->insert_record(NED::TABLE_QP, $record);
             }
         }
     }
@@ -305,7 +285,7 @@ class quizaccess_proctoring extends quiz_access_rule_base
      */
     public static function delete_settings($quiz) {
         global $DB;
-        $DB->delete_records(NED::$PLUGIN_NAME, ['quizid' => $quiz->id]);
+        $DB->delete_records(NED::TABLE_QP, ['quizid' => $quiz->id]);
     }
 
     /**
@@ -332,7 +312,7 @@ class quizaccess_proctoring extends quiz_access_rule_base
     public static function get_settings_sql($quizid) {
         return array(
             'proctoringrequired',
-            'LEFT JOIN {'.NED::$PLUGIN_NAME.'} proctoring ON proctoring.quizid = quiz.id',
+            'LEFT JOIN {'.NED::TABLE_QP.'} proctoring ON proctoring.quizid = quiz.id',
             array());
     }
 
@@ -375,6 +355,7 @@ class quizaccess_proctoring extends quiz_access_rule_base
      */
     public function setup_attempt_page($page){
         global $DB, $USER;
+        $page->add_body_class('quizaccess_proctoring');
         if (!NED::is_secure()) return;
 
         $page->set_title($this->quizobj->get_course()->shortname . ': ' . $page->title);
@@ -385,17 +366,16 @@ class quizaccess_proctoring extends quiz_access_rule_base
         if ($cm){
             $record = new stdClass();
             $record->courseid = $this->quiz->course;
-            $record->quizid = $this->quiz->id;
+            $record->cmid = $cm->id;
             $record->userid = $USER->id;
             $record->webcampicture = '';
             $record->status = optional_param('attempt', 0, PARAM_INT);
             $record->timemodified = time();
-            $record->id = $DB->insert_record('quizaccess_proctoring_logs', $record, true);
+            $record->id = $DB->insert_record(NED::TABLE_LOG, $record, true);
 
             // Get Screenshot Delay and Image Width.
-            $record->camshotdelay = NED::cfg_camshotdelay();
             $record->image_width = NED::cfg_imagewidth();
-            $record->enablescreenshare = NED::cfg_enablescreenshare();;
+            $record->enablescreenshare = NED::cfg_enablescreenshare();
             $record->quizurl = $cm->get_url()->out(false);
 
             NED::js_call_amd('startAttempt', 'setup', $record);

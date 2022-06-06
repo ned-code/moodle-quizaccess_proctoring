@@ -122,7 +122,7 @@ $table->add_data($searchrow);
 foreach ($sqlexecuted as $info) {
     $reporturl = new moodle_url('/mod/quiz/accessrule/proctoring/report.php');
     $folderbtn = '<a target="_blank" href="'.$reporturl.'?courseid=' . $info->courseid .
-        '&quizid=' . $info->quizid . '&cmid=' . $cmid . '&studentid=' . $info->studentid . '&reportid=' . $info->reportid . '">' .
+        '&cmid=' . $cmid . '&studentid=' . $info->studentid . '&reportid=' . $info->reportid . '">' .
         '<i class="icon fa fa-folder-o fa-fw "></i>' . '</a>';
 
 
