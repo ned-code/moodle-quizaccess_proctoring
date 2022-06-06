@@ -28,11 +28,10 @@ require_once(__DIR__ . '/classes/addtional_settings_helper.php');
 
 $cmid = required_param('cmid', PARAM_INT);
 $type = required_param('type', PARAM_TEXT);
-$id = required_param('id', PARAM_INT);
 $context = context_module::instance($cmid, MUST_EXIST);
 require_capability('quizaccess/proctoring:deletecamshots', $context);
 
-$params = array('cmid' => $cmid, 'type' => $type, 'id' => $id);
+$params = array('cmid' => $cmid, 'type' => $type);
 $url = new moodle_url(
 '/mod/quiz/accessrule/proctoring/bulkdelete.php',
 $params
@@ -51,12 +50,12 @@ $helper = new addtional_settings_helper();
 echo $OUTPUT->header();
 
 if ($type == 'course') {
-    $camshotdata = $helper->searchbycourseid($id);
-    $screenshotdata = $helper->searchssbycourseid($id);
+    $camshotdata = $helper->searchbycourseid($cmid);
+    $screenshotdata = $helper->searchssbycourseid($cmid);
 
 } else if ($type == 'quiz') {
-    $camshotdata = $helper->searchbyquizid($id);
-    $screenshotdata = $helper->searchssbyquizid($id);
+    $camshotdata = $helper->search_by_cmid($cmid);
+    $screenshotdata = $helper->search_ss_by_cmid($cmid);
 } else {
     echo "invalid type";
 }

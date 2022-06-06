@@ -1,33 +1,102 @@
-.quiz-check-form.quizaccess_proctoring #fitem_id_actionbtns > .fitemtitle {
-    display: none;
-}
-
+body.quizaccess_proctoring .hidden,
 .quizaccess_proctoring-container .hidden {
     display: none !important;
 }
+body.quizaccess_proctoring .mod_quiz_preflight_popup {
+    top: 50px !important;
+}
+body.quizaccess_proctoring .mod_quiz_preflight_popup > .moodle-dialogue-content {
+    max-height: calc(100vh - 50px);
+}
+body.quizaccess_proctoring .mod_quiz_preflight_popup .moodle-dialogue-bd {
+    max-height: calc(100vh - 100px);
+    overflow: auto;
+}
+body.quizaccess_proctoring div.singlebutton.quizstartbuttondiv:not(.shown) form,
+body#page-mod-quiz-attempt.quizaccess_proctoring:not(.shown) #page {
+    display: none;
+}
+body.quizaccess_proctoring div.singlebutton.quizstartbuttondiv:not(.shown):after,
+body#page-mod-quiz-attempt.quizaccess_proctoring:not(.shown):after {
+    content: " ";
+    display: block;
+    width: 64px;
+    height: 64px;
+    margin: auto;
+    border-radius: 50%;
+    border: 6px solid #9e9e9e;
+    border-color: #9e9e9e transparent #9e9e9e transparent;
+    animation: lds-dual-ring 1.2s linear infinite;
+}
+body#page-mod-quiz-attempt.quizaccess_proctoring:not(.shown):after{
+    margin-top: 35vh;
+}
+@keyframes lds-dual-ring {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+body.quizaccess_proctoring #mod_quiz_navblock #video.navblock-video{
+    width: 100% !important;
+    height: unset !important;
+}
+
+.path-mod-quiz-accessrule-proctoring .proctoring-pictures {
+    display: inline-block;
+    margin: 2px;
+}
+.path-mod-quiz-accessrule-proctoring .proctoring-pictures img {
+    width: 100px;
+}
+.path-mod-quiz-accessrule-proctoring .face-match {
+    border: 5px solid black;
+}
+.path-mod-quiz-accessrule-proctoring .face-match .face-match-high {
+    border-color: green;
+}
+.path-mod-quiz-accessrule-proctoring .face-match .face-match-low {
+    border-color: red;
+}
+
+.quiz-check-form.quizaccess-proctoring-form #fitem_id_actionbtns > .fitemtitle {
+    display: none;
+}
+
 .quizaccess_proctoring-container .proctoring-access-button {
     margin: 7px 0;
     position: relative;
 }
-.quizaccess_proctoring-container .proctoring-access-button[disabled]::after{
-    content: "\f046";
+.quizaccess_proctoring-container .proctoring-access-button.disabled::after{
     right: -20px;
     top: 0;
     display: flex;
     position: absolute;
     align-items: center;
     height: 100%;
-    color: green;
     font: normal normal normal 14px/1 FontAwesome;
+}
+.quizaccess_proctoring-container .proctoring-access-button.disabled.done::after{
+    content: "\f046";
+    color: green;
+}
+.quizaccess_proctoring-container .proctoring-access-button.disabled.fail::after{
+    content: "\f2d4";
+    color: red;
 }
 .quizaccess_proctoring-container #fcvalidate {
     height:50px;
-    margin: 5px;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 .quizaccess_proctoring-container video:not([height]) {
+    display: none;
+}
+.quizaccess_proctoring_preflight_form #id_submitbutton {
     display: none;
 }
 

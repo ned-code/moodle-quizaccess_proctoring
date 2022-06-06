@@ -24,6 +24,8 @@
 
 defined('MOODLE_INTERNAL') || die;
 
+use quizaccess_proctoring\shared_lib as NED;
+
 require_once($CFG->libdir.'/externallib.php');
 
 /**
@@ -45,7 +47,7 @@ class quizaccess_proctoring_external extends external_api
         return new external_function_parameters(
             array(
                 'courseid' => new external_value(PARAM_INT, 'camshot course id'),
-                'quizid' => new external_value(PARAM_INT, 'camshot quiz id'),
+                'cmid' => new external_value(PARAM_INT, 'camshot cmid id'),
                 'userid' => new external_value(PARAM_INT, 'camshot user id')
             )
         );
@@ -55,7 +57,7 @@ class quizaccess_proctoring_external extends external_api
      * Get the cam shots as service.
      *
      * @param mixed $courseid course id.
-     * @param mixed $quizid context/quiz id.
+     * @param mixed $cmid course module id.
      * @param mixed $userid user id.
      *
      * @return array
@@ -64,19 +66,19 @@ class quizaccess_proctoring_external extends external_api
      * @throws moodle_exception
      * @throws required_capability_exception
      */
-    public static function get_camshots($courseid, $quizid, $userid) {
+    public static function get_camshots($courseid, $cmid, $userid) {
         global $DB, $USER;
 
         $params = array(
             'courseid' => $courseid,
-            'quizid' => $quizid,
+            'cmid' => $cmid,
             'userid' => $userid
         );
 
         // Validate the params.
         self::validate_parameters(self::get_camshots_parameters(), $params);
 
-        $context = context_module::instance($params['quizid']);
+        $context = context_module::instance($params['cmid']);
 
         // Default value for userid.
         if (empty($params['userid'])) {
@@ -86,11 +88,11 @@ class quizaccess_proctoring_external extends external_api
         self::request_user_require_capability($params, $context, $USER);
 
         $warnings = array();
-        if ($params['quizid']) {
-            $camshots = $DB->get_records('quizaccess_proctoring_logs', $params, 'id DESC');
+        if ($params['cmid']) {
+            $camshots = $DB->get_records(NED::TABLE_LOG, $params, 'id DESC');
         } else {
-            $camshots = $DB->get_records('quizaccess_proctoring_logs',
-                array('courseid' => $courseid, 'userid' => $userid), 'id DESC');
+            $camshots = $DB->get_records(NED::TABLE_LOG,
+                ['courseid' => $courseid, 'userid' => $userid], 'id DESC');
         }
 
         $returnedcamhosts = array();
@@ -99,7 +101,7 @@ class quizaccess_proctoring_external extends external_api
             if ($camshot->webcampicture !== '') {
                 $returnedcamhosts[] = array(
                     'courseid' => $camshot->courseid,
-                    'quizid' => $camshot->quizid,
+                    'cmid' => $camshot->cmid,
                     'userid' => $camshot->userid,
                     'webcampicture' => $camshot->webcampicture,
                     'timemodified' => $camshot->timemodified,
@@ -126,7 +128,7 @@ class quizaccess_proctoring_external extends external_api
                     new external_single_structure(
                         array(
                             'courseid' => new external_value(PARAM_NOTAGS, 'camshot course id'),
-                            'quizid' => new external_value(PARAM_NOTAGS, 'camshot quiz id'),
+                            'cmid' => new external_value(PARAM_NOTAGS, 'camshot cmid id'),
                             'userid' => new external_value(PARAM_NOTAGS, 'camshot user id'),
                             'webcampicture' => new external_value(PARAM_RAW, 'camshot webcam photo'),
                             'timemodified' => new external_value(PARAM_NOTAGS, 'camshot time modified'),
@@ -150,7 +152,7 @@ class quizaccess_proctoring_external extends external_api
             array(
                 'courseid' => new external_value(PARAM_INT, 'course id'),
                 'screenshotid' => new external_value(PARAM_INT, 'screenshot id'),
-                'quizid' => new external_value(PARAM_INT, 'screenshot quiz id'),
+                'cmid' => new external_value(PARAM_INT, 'screenshot cm id'),
                 'webcampicture' => new external_value(PARAM_RAW, 'webcam photo'),
                 'imagetype' => new external_value(PARAM_INT, 'image type')
             )
@@ -162,7 +164,7 @@ class quizaccess_proctoring_external extends external_api
      *
      * @param mixed $courseid
      * @param mixed $screenshotid
-     * @param mixed $quizid Quizid OR cmid
+     * @param mixed $cmid cmid
      * @param mixed $webcampicture
      *
      * @return array
@@ -171,7 +173,7 @@ class quizaccess_proctoring_external extends external_api
      * @throws invalid_parameter_exception
      * @throws stored_file_creation_exception
      */
-    public static function send_camshot($courseid, $screenshotid, $quizid, $webcampicture, $imagetype) {
+    public static function send_camshot($courseid, $screenshotid, $cmid, $webcampicture, $imagetype) {
         global $DB, $USER;
 
         // Validate the params.
@@ -180,23 +182,39 @@ class quizaccess_proctoring_external extends external_api
             array(
                 'courseid' => $courseid,
                 'screenshotid' => $screenshotid,
-                'quizid' => $quizid,
+                'cmid' => $cmid,
                 'webcampicture' => $webcampicture,
                 'imagetype' => $imagetype
             )
         );
+
+        $result = array();
         $warnings = array();
 
-        if ($imagetype == 1) {
+        if ($imagetype == 1 || $imagetype == 2){
             $record = new stdClass();
             $record->filearea = 'picture';
-            $record->component = 'quizaccess_proctoring';
+            $record->component = NED::$PLUGIN_NAME;
             $record->filepath = '';
             $record->itemid = $screenshotid;
             $record->license = '';
             $record->author = '';
 
-            $context = context_module::instance($quizid);
+            if ($imagetype == 1){
+                $prefixname = 'webcam-';
+                $url_name = 'webcampicture';
+                $camshot = $DB->get_record(NED::TABLE_LOG, ['id' => $screenshotid]);
+                $status = $camshot->status ?? 0;
+                $table = NED::TABLE_LOG;
+            } else {
+                // $imagetype = 2
+                $prefixname = 'screenshot-';
+                $url_name = 'screenshot';
+                $status = 0;
+                $table = NED::TABLE_SCREENSHOT;
+            }
+
+            $context = \context_module::instance($cmid);
             $fs = get_file_storage();
             $record->filepath = file_correct_filepath($record->filepath);
 
@@ -205,100 +223,32 @@ class quizaccess_proctoring_external extends external_api
             list($type, $data) = explode(';', $data);
             list(, $data) = explode(',', $data);
             $data = base64_decode($data);
-            $filename = 'webcam-' . $screenshotid . '-' . $USER->id . '-' . $courseid . '-' . time() . rand(1, 1000) . '.png';
+            $filename = join('_', [$prefixname.$screenshotid, $USER->id, $courseid, time(), rand(1, 1000).'.png']);
 
             $data = self::add_timecode_to_image($data);
-
             $record->courseid = $courseid;
             $record->filename = $filename;
             $record->contextid = $context->id;
             $record->userid = $USER->id;
 
-            $fs->create_file_from_string($record, $data);
-
-            $url = moodle_url::make_pluginfile_url(
-                $context->id,
-                $record->component,
-                $record->filearea,
-                $record->itemid,
-                $record->filepath,
-                $record->filename,
-                false
-            );
-
-            $camshot = $DB->get_record('quizaccess_proctoring_logs', array('id' => $screenshotid));
+            $file = $fs->create_file_from_string($record, $data);
+            $url = NED::file_get_pluginfile_url($file, false);
 
             $record = new stdClass();
             $record->courseid = $courseid;
-            $record->quizid = $quizid;
+            $record->cmid = $cmid;
             $record->userid = $USER->id;
-            $record->webcampicture = "{$url}";
-            $record->status = $camshot->status;
+            $record->$url_name = "{$url}";
             $record->timemodified = time();
-            $screenshotid = $DB->insert_record('quizaccess_proctoring_logs', $record, true);
+            $record->status = $status;
+            $screenshotid = $DB->insert_record($table, $record, true);
 
-            $result = array();
             $result['screenshotid'] = $screenshotid;
-            $result['warnings'] = $warnings;
-        } else if ($imagetype == 2) {
-            $record = new stdClass();
-            $record->filearea = 'picture';
-            $record->component = 'quizaccess_proctoring';
-            $record->filepath = '';
-            $record->itemid = $screenshotid;
-            $record->license = '';
-            $record->author = '';
-
-            $context = context_module::instance($quizid);
-            $fs = get_file_storage();
-            $record->filepath = file_correct_filepath($record->filepath);
-
-            // For base64 to file.
-            $data = $webcampicture;
-            list($type, $data) = explode(';', $data);
-            list(, $data) = explode(',', $data);
-            $data = base64_decode($data);
-            $filename = 'screenshot-' . $screenshotid . '-' . $USER->id . '-' . $courseid . '-' . time() . rand(1, 1000) . '.png';
-
-            $data = self::add_timecode_to_image($data);
-
-            $record->courseid = $courseid;
-            $record->filename = $filename;
-            $record->contextid = $context->id;
-            $record->userid = $USER->id;
-
-            $fs->create_file_from_string($record, $data);
-
-            $url = moodle_url::make_pluginfile_url(
-                $context->id,
-                $record->component,
-                $record->filearea,
-                $record->itemid,
-                $record->filepath,
-                $record->filename,
-                false
-            );
-
-            $camshot = $DB->get_record('quizaccess_proctoring_logs', array('id' => $screenshotid));
-
-            $record = new stdClass();
-            $record->courseid = $courseid;
-            $record->quizid = $quizid;
-            $record->userid = $USER->id;
-            $record->screenshot = "{$url}";
-            $record->status = 0;
-            $record->timemodified = time();
-            $screenshotid = $DB->insert_record('proctoring_screenshot_logs', $record, true);
-
-            $result = array();
-            $result['screenshotid'] = $screenshotid;
-            $result['warnings'] = $warnings;
         } else {
-            $result = array();
             $result['screenshotid'] = 100;
-            $result['warnings'] = array();
         }
 
+        $result['warnings'] = $warnings;
         return $result;
     }
 
@@ -369,7 +319,6 @@ class quizaccess_proctoring_external extends external_api
             array(
                 'courseid' => new external_value(PARAM_INT, 'course id'),
                 'cmid' => new external_value(PARAM_INT, 'cm id'),
-                'profileimage' => new external_value(PARAM_RAW, 'profile photo'),
                 'webcampicture' => new external_value(PARAM_RAW, 'webcam photo'),
             )
         );
@@ -379,8 +328,7 @@ class quizaccess_proctoring_external extends external_api
      * Store the Cam shots in Moodle subsystems and insert in log table
      *
      * @param mixed $courseid
-     * @param mixed $screenshotid
-     * @param mixed $quizid Quizid OR cmid
+     * @param mixed $cmid cmid
      * @param mixed $webcampicture
      *
      * @return array
@@ -389,7 +337,7 @@ class quizaccess_proctoring_external extends external_api
      * @throws invalid_parameter_exception
      * @throws stored_file_creation_exception
      */
-    public static function validate_face($courseid, $cmid, $profileimage, $webcampicture) {
+    public static function validate_face($courseid, $cmid, $webcampicture) {
         global $DB, $USER, $CFG;
 
         // Validate the params.
@@ -398,7 +346,6 @@ class quizaccess_proctoring_external extends external_api
             array(
                 'courseid' => $courseid,
                 'cmid' => $cmid,
-                'profileimage' => $profileimage,
                 'webcampicture' => $webcampicture
             )
         );
@@ -444,16 +391,16 @@ class quizaccess_proctoring_external extends external_api
 
         $record = new stdClass();
         $record->courseid = $courseid;
-        $record->quizid = $cmid;
+        $record->cmid = $cmid;
         $record->userid = $USER->id;
         $record->webcampicture = "{$url}";
         $record->status = $screenshotid;
         $record->timemodified = time();
-        $screenshotid = $DB->insert_record('quizaccess_proctoring_logs', $record, true);
+        $screenshotid = $DB->insert_record(NED::TABLE_LOG, $record, true);
 
         // Face check.
         require_once($CFG->dirroot.'/mod/quiz/accessrule/proctoring/lib.php');
-        $method = get_proctoring_settings("fcmethod");
+        $method = NED::get_config("fcmethod");
         if ($method == "AWS") {
             aws_analyze_specific_image($screenshotid);
         } else if ($method == "BS") {
@@ -462,9 +409,9 @@ class quizaccess_proctoring_external extends external_api
             $status = "failed";
         }
 
-        $currentdata = $DB->get_record('quizaccess_proctoring_logs', array('id' => $screenshotid));
+        $currentdata = $DB->get_record(NED::TABLE_LOG, ['id' => $screenshotid]);
         $awsscore = $currentdata->awsscore;
-        $threshhold = (int)get_proctoring_settings('awsfcthreshold');
+        $threshhold = (int)NED::get_config('awsfcthreshold');
 
         if ($awsscore > $threshhold) {
             $status = "success";

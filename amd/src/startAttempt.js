@@ -1,13 +1,509 @@
-define(['jquery', 'core/ajax', 'core/notification', 'core/modal_events', 'core/str', 'core/log'],
-    function($, Ajax, Notification, ModalEvents, Str, log) {
-        function d(...args){
-            // noinspection JSUnresolvedVariable
-            (log.debug || console.debug)(...args);
+define(['jquery', 'core/ajax', 'core/notification', 'core/modal_events', 'core/str', 'core/loglevel', 'core/config'],
+    function($, Ajax, Notification, ModalEvents, Str, Log, CFG) {
+        const PLUGIN = 'quizaccess_proctoring';
+        const KEY_ALLOW = 'access_granted';
+        const KEY_QUIZ_START = 'quiz_start';
+
+        const KEY_WORK_DELAY = 24*3600*1000; // 1 day
+        const INTERVAL_DELAY = 1000;
+
+        const SETTING_H = 'height';
+        const SETTING_W = 'width';
+        const SETTING_ID = 'id';
+        const SETTING_CMID = 'cmid';
+        const SETTING_COURSEID = 'courseid';
+        const SETTING_SCR_ENABLE = 'enablescreenshare';
+        const SETTING_FACE_ENABLE = 'faceidcheck';
+        const SETTING_CAMSHOT_DELAY = 'camshotdelay';
+        const SETTING_WEB_ALLOWED = 'webcam_allowed';
+        const SETTING_SCR_ALLOWED = 'screen_allowed';
+        const SETTING_FACE_ALLOWED = 'face_allowed';
+        const SETTING_BOX_ALLOWED = 'checkbox_validation';
+        const SETTING_FINAL_DENY = 'final_deny';
+        const SETTING_QUIZ_URL = 'quizurl';
+
+        const ID_START_QUIZ = 'id_start_quiz';
+        const ID_WEBCAM_BUTTON = 'allow_camera_btn';
+        const ID_SCREEN_BUTTON = 'share_screen_btn';
+        const ID_FACE_BUTTON = 'fcvalidate';
+        const ID_FACE_RESULT = 'face_validation_result';
+
+        const SELECTOR_QUIZ_START_BUTTON_DIV = 'div.singlebutton.quizstartbuttondiv';
+        const DISPLAY_SURFACE = 'monitor';
+        const IS_QUIZ_PAGE = 'is_quiz_page';
+
+        //region Set Log
+        let log = new Log.constructor(PLUGIN);
+        log.originalFactory = log.methodFactory;
+        log.methodFactory = (methodName, logLevel) => log.originalFactory(methodName, logLevel).bind(log, "["+PLUGIN+"]");
+        log.setLevel(log.getLevel());
+        let d = log.debug.bind(log);
+        d('loaded');
+        //endregion
+
+        //region Set Storage
+        let Storage = {
+            _storage: window.localStorage,
+            /**
+             * Add prefix to key
+             *
+             * @param {string|array|any} key - The cache key to check, if it's array - join it by '_', otherwise uses .toString() method
+             *
+             * @return {string} - key with plugin prefix
+             */
+            _key: function(key){
+                if (key instanceof Array) key = key.join('_');
+
+                return PLUGIN + '_' + key.toString();
+            },
+            /**
+             * Checked that fullKeyName and key are the same
+             *
+             * @param {string} fullKeyName - The cache full name key to check
+             * @param {string|array|any} key - The cache key to check, if it's array - join it by '_', otherwise uses .toString() method
+             *
+             * @return {boolean}
+             */
+            keyCheck: function(fullKeyName, key){
+                return fullKeyName.toString() === this._key(key);
+            },
+            /**
+             * Get a value from local storage.
+             * @method get
+             *
+             * @param {string|array|any} key - The cache key to check, if it's array - join it by '_', otherwise uses .toString() method
+             *
+             * @return {boolean|string|any} False if the value is not in the cache, or some other error -
+             *      a string otherwise, or parsed JSON data
+             */
+            get: function(key){
+                let value = this._storage.getItem(this._key(key));
+                let res;
+                if (typeof value === 'string') {
+                    try {
+                        res = JSON.parse(value);
+                    } catch (e) {
+                        res = value;
+                    }
+                } else {
+                    res = value;
+                }
+
+                return res;
+            },
+            /**
+             * Get a value from local storage.
+             * @method get
+             *
+             * @param {string|array|any} key - The cache key to check, if it's array - join it by '_', otherwise uses .toString() method
+             */
+            remove: function(key){
+                this._storage.removeItem(this._key(key));
+            },
+            /**
+             * Set a value to local storage.
+             * Remember: if json is false - value must be string.
+             * @method set
+             *
+             * @param {string|array|any} key - The cache key to check, if it's array - join it by '_', otherwise uses .toString() method
+             * @param {string|any} value - The value to set, saved as JSON
+             *
+             * @return {boolean} False if the value can't be saved, or some other error - true otherwise.
+             */
+            set: function(key, value){
+                let res;
+                try {
+                    res = JSON.stringify(value);
+                } catch (e) {
+                    res = value;
+                }
+
+                // This can throw exceptions when the storage limit is reached.
+                try {
+                    this._storage.setItem(this._key(key), res);
+                } catch (e) {
+                    return false;
+                }
+                return true;
+            },
+            isSupported: function() {
+                if (!this._storage) return false;
+
+                try {
+                    // MDL-51461 - Some browsers misreport availability of the storage, so check it is actually usable.
+                    let testKey = '__storage_test__';
+                    this.set(testKey, testKey);
+                    this.remove(testKey);
+                } catch (ex) {
+                    return false;
+                }
+
+                return true;
+            },
+        };
+
+        if (!Storage.isSupported()){
+            warningAlert('error:localStorage', null, true);
         }
-        function warning_alert(text_key, okCallback=null, error=false){
+        //endregion
+
+        //region Local Data
+        let settings = {};
+
+        let canvas, photo;
+        let videoWebcam, videoScreen;
+        let webcamShotInterval, screenShotInterval;
+        let quizwindow;
+
+        let isMobile = false; //initiate as false
+        // device detection
+        // noinspection RegExpRedundantEscape,RegExpSingleCharAlternation
+        if(/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|ipad|iris|kindle|Android|Silk|lge |maemo|midp|mmp|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows (ce|phone)|xda|xiino/i.test(navigator.userAgent)
+            || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(navigator.userAgent.substr(0,4))) {
+            isMobile = true;
+        }
+        settings[SETTING_W] = isMobile ? 100 : 320;
+        settings[SETTING_H] = 0; // This will be computed based on the input stream
+        let data = null;
+        //endregion
+
+        //region Functions
+        function isU(val){
+            return val === undefined;
+        }
+        // settings
+        function importSettings(data){
+            for (const key in data) settings[key] = data[key];
+        }
+        function clearStorage(){
+            Storage.remove(KEY_ALLOW);
+            Storage.remove(KEY_QUIZ_START);
+        }
+        function checkKeyAllow(){
+            let data = Storage.get(KEY_ALLOW);
+            if (!data) return false;
+
+            return (data + KEY_WORK_DELAY) >= (new Date()).getTime();
+        }
+        function finishAttempt(alert_txt=false){
+            d('finishAttempt', 'txt:', alert_txt);
+            let final_fun = function(){};
+            if (!settings[IS_QUIZ_PAGE]){
+                clearStorage();
+                closeWindow(quizwindow);
+            } else {
+                Storage.remove(KEY_QUIZ_START);
+                $('#page').remove();
+                final_fun = closeWindowMain;
+            }
+
+            if (alert_txt){
+                if (typeof alert_txt !== 'string') alert_txt = 'warning:keepparentwindowopen';
+
+                warningAlert(alert_txt, final_fun);
+            } else {
+                final_fun();
+            }
+        }
+        function checkRules(){
+            if (settings[IS_QUIZ_PAGE]) return undefined;
+            if (settings[SETTING_FINAL_DENY]) return false;
+            if (!settings[SETTING_WEB_ALLOWED]) return false;
+            if (settings[SETTING_SCR_ENABLE] && !settings[SETTING_SCR_ALLOWED]) return false;
+            if (settings[SETTING_FACE_ENABLE] && !settings[SETTING_FACE_ALLOWED]) return false;
+
+            return !!settings[SETTING_BOX_ALLOWED];
+        }
+        function videoPlay(videoElem){
+            let playPromise = videoElem.play();
+
+            if (playPromise !== undefined){
+                playPromise
+                    .then(() => {})
+                    .catch(() => {});
+            }
+        }
+        function updateAllow(value, final=false){
+            if (settings[IS_QUIZ_PAGE]) return undefined;
+            if (settings[SETTING_FINAL_DENY]) return false;
+
+            let prev = settings[KEY_ALLOW];
+            let res = isU(value) ? checkRules() : value;
+            settings[KEY_ALLOW] = res;
+
+            let finalDeny = !res && final;
+            if (finalDeny){
+                turnWebcam(false);
+                turnScreen(false);
+                settings[SETTING_FINAL_DENY] = true;
+
+                $('#'+ID_START_QUIZ).remove();
+                let $quizstartbuttondiv = $(SELECTOR_QUIZ_START_BUTTON_DIV);
+                if ($quizstartbuttondiv.length){
+                    $quizstartbuttondiv
+                        .find('form').prop('action', '').addClass('hidden')
+                        .find(':input').prop('disabled', true);
+                    // noinspection JSCheckFunctionSignatures
+                    Str.get_string('cantattempt', PLUGIN).done(
+                        s => $quizstartbuttondiv.append($('<div></div>').text(s).addClass('error'))
+                    );
+                }
+            }
+
+            if (res !== prev){
+                Storage.set(KEY_ALLOW, res ? (new Date()).getTime() : false);
+
+                if (!finalDeny){
+                    $('#'+ID_START_QUIZ).prop("disabled", !res);
+                }
+            }
+
+            return res;
+        }
+        function updateWebcamStatus(){
+            if (settings[SETTING_FINAL_DENY]) return;
+
+            let finish = function(){
+                turnWebcam(false);
+                return null;
+            };
+
+            if (!videoWebcam || !videoWebcam.srcObject) return finish();
+
+            let currentStream = videoWebcam.srcObject;
+            let active = currentStream.active;
+            if (!active){
+                return finish();
+            }
+        }
+        function updateScreenStatus(){
+            if (settings[SETTING_FINAL_DENY]) return;
+
+            let finish = function(final_fail=false){
+                turnScreen(false, null, final_fail);
+                return null;
+            };
+
+            if (!videoScreen || !videoScreen.srcObject) return finish();
+
+            let currentStream = videoScreen.srcObject;
+            let active = currentStream.active;
+            if (!active){
+                return finish();
+            }
+
+            let displaySurface = getDisplaySurface(videoScreen);
+            if (displaySurface !== DISPLAY_SURFACE){
+                if (isU(displaySurface)){
+                    warningAlert('error:sharescreen', null, true);
+                    return finish(true);
+                }
+
+                warningAlert('warning:sorry:sharescreen');
+                return finish();
+            }
+        }
+        function turnWebcam(value=true, stream=null){
+            if (settings[SETTING_FINAL_DENY]) return;
+
+            value = value && videoWebcam;
+            settings[SETTING_WEB_ALLOWED] = value;
+            if (value){
+                if (stream){
+                    videoWebcam.srcObject = stream;
+                }
+                videoPlay(videoWebcam);
+            } else {
+                if (videoWebcam){
+                    if (videoWebcam.srcObject){
+                        videoWebcam.srcObject.getTracks().forEach(track => track.stop());
+                    }
+                    videoWebcam.srcObject = null;
+                    videoWebcam.removeAttribute('height');
+                    videoWebcam.streaming = false;
+                }
+            }
+
+            updateAllow();
+            $("#"+ID_WEBCAM_BUTTON).prop('disabled', value).toggleClass('disabled done', value);
+        }
+        function turnScreen(value=true, stream=null, final_fail=false){
+            if (settings[SETTING_FINAL_DENY]) return;
+
+            value = value && videoScreen && !final_fail;
+            settings[SETTING_SCR_ALLOWED] = value;
+            if (value){
+                if (stream){
+                    videoScreen.srcObject = stream;
+                }
+                videoPlay(videoScreen);
+            } else {
+                if (videoScreen){
+                    if (videoScreen.srcObject){
+                        videoScreen.srcObject.getTracks().forEach(track => track.stop());
+                    }
+                    videoScreen.srcObject = null;
+                    videoScreen.removeAttribute('height');
+                }
+
+                closeWindow(quizwindow);
+            }
+
+            if (final_fail){
+                updateAllow(false, true);
+                $("#"+ID_SCREEN_BUTTON).prop('disabled', true).removeClass('done').addClass('disabled fail');
+            } else {
+                updateAllow();
+                $("#"+ID_SCREEN_BUTTON).prop('disabled', value).toggleClass('disabled done', value);
+            }
+
+            if (value){
+                // yes, it should be at the end
+                updateScreenStatus();
+            }
+        }
+        // get pictures
+        function getDisplaySurface(videoElem){
+            let displaySurface = null;
+            if (!videoElem || !videoElem.srcObject || !videoElem.srcObject.getVideoTracks) return displaySurface;
+
+            let videoTracks = videoElem.srcObject.getVideoTracks();
+            for (let i = 0; i < videoTracks.length; i++){
+                let track = videoTracks[i];
+                if (!track.enabled || track.kind !== "video") continue;
+
+                let tr_settings = track.getSettings();
+                if (!tr_settings) continue;
+
+                displaySurface = tr_settings.displaySurface;
+                if (displaySurface) return displaySurface;
+            }
+
+            return displaySurface;
+        }
+        function takeScreenshot(){
+            if (videoScreen.srcObject !== null) {
+                // Console.log(videoElem);
+                let currentStream = videoScreen.srcObject;
+                let active = currentStream.active;
+                // Console.log(active);
+
+                let displaySurface = getDisplaySurface(videoScreen);
+                if (!active) {
+                    warningAlert('warning:sorry:restartattempt');
+                    clearInterval(screenShotInterval);
+
+                    if (quizwindow) quizwindow.close();
+                    return false;
+                }
+
+                if (displaySurface !== DISPLAY_SURFACE) {
+                    d(displaySurface);
+                    warningAlert('warning:sorry:sharescreen');
+                    clearInterval(screenShotInterval);
+
+                    if (quizwindow) quizwindow.close();
+                    return false;
+                }
+
+                // Capture Screen
+                let canvas_screen = document.getElementById('canvas-screen');
+                let screen_context = canvas_screen.getContext('2d');
+
+                canvas_screen.width = screen.width;
+                canvas_screen.height = screen.height;
+                screen_context.drawImage(videoScreen, 0, 0, screen.width, screen.height);
+                let screen_data = canvas_screen.toDataURL('image/png');
+
+                // API Call
+                let wsfunction = 'quizaccess_proctoring_send_camshot';
+                let params = {
+                    'courseid': settings[SETTING_COURSEID],
+                    'screenshotid': settings[SETTING_ID],
+                    'cmid': settings[SETTING_CMID],
+                    'webcampicture': screen_data,
+                    'imagetype': 2
+                };
+
+                let request = {
+                    methodname: wsfunction,
+                    args: params
+                };
+
+                Ajax.call([request])[0].done(function(data) {
+                    if (data.warnings.length < 1) {
+                        // NO; pictureCounter++;
+                    } else {
+                        if (videoScreen) {
+                            warningAlert('error:takingimage', null, true);
+                            clearInterval(screenShotInterval);
+                        }
+                    }
+                }).fail(Notification.exception);
+            }
+        }
+        function takePicture(){
+            let context = canvas.getContext('2d');
+            if (settings[SETTING_W] && settings[SETTING_H]) {
+                canvas.width = settings[SETTING_W];
+                canvas.height = settings[SETTING_H];
+                context.drawImage(videoWebcam, 0, 0, settings[SETTING_W], settings[SETTING_H]);
+                data = canvas.toDataURL('image/png');
+                photo.setAttribute('src', data);
+
+                let wsfunction = 'quizaccess_proctoring_send_camshot';
+                let params = {
+                    'courseid': settings[SETTING_COURSEID],
+                    'screenshotid': settings[SETTING_ID],
+                    'cmid': settings[SETTING_CMID],
+                    'webcampicture': data,
+                    'imagetype': 1
+                };
+
+                let request = {
+                    methodname: wsfunction,
+                    args: params
+                };
+
+                Ajax.call([request])[0].done(function(data) {
+                    if (data.warnings.length < 1) {
+                        // NO; pictureCounter++;
+                    } else {
+                        if (videoWebcam) {
+                            warningAlert('error:takingimage', null, true);
+                        }
+                    }
+                }).fail(Notification.exception);
+            } else {
+                clearPhoto();
+            }
+        }
+        function clearPhoto(){
+            if (!settings[SETTING_WEB_ALLOWED]) return;
+
+            let context = canvas.getContext('2d');
+            context.fillStyle = "#AAA";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            data = canvas.toDataURL('image/png');
+            if (photo) photo.setAttribute('src', data);
+        }
+        function takeScreenshotInterval(){
+            if (!Storage.get(KEY_QUIZ_START)) return;
+
+            takeScreenshot();
+        }
+        function takePictureInterval(){
+            if (!Storage.get(KEY_QUIZ_START)) return;
+
+            takePicture();
+        }
+
+        // other
+        function warningAlert(text_key, okCallback=null, is_error=false){
             Str.get_strings([
-                {'key' : error ? 'error' : 'warning'},
-                {'key' : text_key, component : 'quizaccess_proctoring'},
+                {'key' : is_error ? 'error' : 'warning'},
+                {'key' : text_key, component : PLUGIN},
                 {'key' : 'ok'},
             ]).done(function(s) {
                 Notification.alert(s[0], s[1], s[2])
@@ -18,116 +514,59 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/modal_events', 'core/s
             }
             ).fail(Notification.exception);
         }
-        // d('proctoring.js loaded');
-        $(function() {
-            $('#id_start_quiz').prop("disabled", true);
-            $('#id_proctoring').on('change', function() {
-                if (this.checked && (isCameraAllowed || isCameraAllowed === null)) {
-                    $('#id_start_quiz').prop("disabled", false);
-                } else {
-                    $('#id_start_quiz').prop("disabled", true);
-                }
-            });
-        });
+        function closeWindow(win){
+            if (!win) return;
 
+            win.close();
+            // if window not allowed to close, change its location
+            if (win.location && win.location.assign) win.location.assign('/mod/quiz/view.php?id='+settings[SETTING_CMID]);
+        }
+        function closeWindowMain(win){
+            win = win || window;
+            closeWindow(win);
+        }
+        function CheckQuizPage() {
+            const quizUrl = settings[SETTING_QUIZ_URL];
+            let should_finish = function(){
+                if (!checkKeyAllow()) return true;
+
+                if (window.opener == null || window.opener.closed) return true;
+
+                let parentWindowURL = window.opener.location.href;
+                if (!parentWindowURL.includes(quizUrl)) return true;
+
+                // noinspection RedundantIfStatementJS
+                if (parentWindowURL !== quizUrl) return true;
+
+                return false;
+            }
+
+            if (should_finish()) {
+                d('call finishAttempt');
+                finishAttempt(false, true);
+            }
+        }
         function find_elements(){
-            video = document.getElementById('video');
+            videoWebcam = document.getElementById('video');
             canvas = document.getElementById('canvas');
             photo = document.getElementById('photo');
         }
+        function callAfterPageLoad(fun){
+            if (typeof fun !== 'function') return;
 
-        let firstcalldelay = 3000; // 3 seconds after the page load
-        let takepicturedelay = 30000; // 30 seconds
-        let isCameraAllowed = null;
-        if (navigator.mediaDevices){
-            navigator.mediaDevices.enumerateDevices()
-                .then(function(devices) {
-                    devices.forEach(function(device) {
-                        if (device.kind === 'videoinput')
-                            isCameraAllowed = isCameraAllowed || device.label !== '';
-                    });
-                })
+            if (document.readyState === 'complete'){
+                fun();
+            } else {
+                $(window).on('load', fun);
+            }
         }
+        //endregion
 
-        let video, canvas, photo;
-        find_elements();
-
-        let isMobile = false; //initiate as false
-        // device detection
-        if(/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|ipad|iris|kindle|Android|Silk|lge |maemo|midp|mmp|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows (ce|phone)|xda|xiino/i.test(navigator.userAgent)
-            || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(navigator.userAgent.substr(0,4))) {
-            isMobile = true;
-        }
-        let width = isMobile ? 100 : 320;
-        let height = 0; // This will be computed based on the input stream
-        let streaming = false;
-        let data = null;
-
-        let SA = {
-            hideButtons: function(){
-                let $quiz_button = $('#mod_quiz-next-nav');
-                if (!$quiz_button.hasClass('hidden')){
-                    $quiz_button.prop("disabled", true).addClass('hidden')
-                        .after('<div class="text text-red red">You need to enable web camera before submitting this quiz!</div>');
-                }
-            },
-            clearphoto: function(){
-                if (isCameraAllowed || isCameraAllowed === null){
-                    var context = canvas.getContext('2d');
-                    context.fillStyle = "#AAA";
-                    context.fillRect(0, 0, canvas.width, canvas.height);
-
-                    data = canvas.toDataURL('image/png');
-                    if (photo) photo.setAttribute('src', data);
-                } else {
-                    SA.hideButtons();
-                }
-            },
-            takepicture: function(){
-                var context = canvas.getContext('2d');
-                if (width && height) {
-                    canvas.width = width;
-                    canvas.height = height;
-                    context.drawImage(video, 0, 0, width, height);
-                    data = canvas.toDataURL('image/png');
-                    photo.setAttribute('src', data);
-                    props.webcampicture = data;
-
-                    var wsfunction = 'quizaccess_proctoring_send_camshot';
-                    var params = {
-                        'courseid': props.courseid,
-                        'screenshotid': props.id,
-                        'quizid': props.quizid,
-                        'webcampicture': data,
-                        'imagetype': 1
-                    };
-
-                    var request = {
-                        methodname: wsfunction,
-                        args: params
-                    };
-
-                    Ajax.call([request])[0].done(function(data) {
-                        if (data.warnings.length < 1) {
-                            // NO; pictureCounter++;
-                        } else {
-                            if (video) {
-                                warning_alert('error:takingimage', null, true);
-                            }
-                        }
-                    }).fail(Notification.exception);
-                } else {
-                    SA.clearphoto();
-                }
-            },
+        let API = {
             setup: function(props) {
-                // $("body").attr("oncopy","return false;");
-                // $("body").attr("oncut","return false;");
-                // $("body").attr("onpaste","return false;");
-                // $("body").attr("oncontextmenu","return false;");
+                importSettings(props);
+                settings[IS_QUIZ_PAGE] = true;
 
-                // Camshotdelay taken from admin_settings
-                takepicturedelay = props.camshotdelay;
                 // Skip for summary page
                 if (document.getElementById("page-mod-quiz-summary") !== null &&
                     document.getElementById("page-mod-quiz-summary").innerHTML.length) {
@@ -138,468 +577,240 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/modal_events', 'core/s
                     return false;
                 }
 
-                $('#mod_quiz_navblock').append('<div class="card-body p-3"><h3 class="no text-left">Webcam</h3> <br/>'
-                    + '<video id="video">Video stream not available.</video><canvas id="canvas" style="display:none;"></canvas>'
-                    + '<div class="output" style="display:none;">'
+                Storage.set(KEY_QUIZ_START, true);
+
+                $('#mod_quiz_navblock').append('<div class="card-body p-3"><h3 class="no text-left">Webcam</h3>'
+                    + '<video id="video" class="navblock-video">Video stream not available.</video>'
+                    + '<canvas id="canvas" class="hidden"></canvas>'
+                    + '<div class="output hidden">'
                     + '<img id="photo" alt="The picture will appear in this box."/></div></div>');
 
-                if (navigator.mediaDevices){
-                    navigator.mediaDevices.getUserMedia({video: true, audio: false})
-                        .then(function(stream) {
-                            video.srcObject = stream;
-                            video.play();
-                            isCameraAllowed = true;
-                        })
-                        .catch(function() {
-                            isCameraAllowed = false;
-                            SA.hideButtons();
-                        });
-                } else {
-                    isCameraAllowed = false;
-                    SA.hideButtons();
-                }
+                find_elements();
+                API.videoStartup(() => finishAttempt('warning:sorry:restartattempt'));
+                $(window)
+                    .on("unload", finishAttempt)
+                    .on('storage', (e) => {
+                        d('onstorage', e);
+                        if (e.key && Storage.keyCheck(e.key, KEY_ALLOW)) CheckQuizPage();
+                    });
 
-                if (!video) find_elements();
-
-                if (video) {
-                    video.addEventListener('canplay', function() {
-                        if (!streaming) {
-                            height = video.videoHeight / (video.videoWidth / width);
-                            // Firefox currently has a bug where the height can't be read from
-                            // The video, so we will make assumptions if this happens.
-                            if (isNaN(height)) {
-                                height = width / (4 / 3);
-                            }
-                            video.setAttribute('width', width);
-                            video.setAttribute('height', height);
-                            canvas.setAttribute('width', width);
-                            canvas.setAttribute('height', height);
-                            streaming = true;
-                        }
-                    }, false);
-
-                    // Allow to click picture
-                    video.addEventListener('click', function(ev) {
-                        SA.takepicture();
-                        ev.preventDefault();
-                    }, false);
-                    setTimeout(SA.takepicture, firstcalldelay);
-                    setInterval(SA.takepicture, takepicturedelay);
-                } else {
-                    SA.hideButtons();
-                }
-                var cascadeClose;
-                $(window).ready(function() {
-                    cascadeClose = setInterval(CloseOnParentClose, 1000);
+                callAfterPageLoad(function(){
+                    CheckQuizPage();
+                    $('body').addClass('shown');
                 });
-                const quizurl = props.quizurl;
-                function CloseOnParentClose() {
-                    //// OLD CODE
-                    // if (typeof window.opener != 'undefined' && window.opener !== null) {
-                    //     if (window.opener.closed) {
-                    //         window.close();
-                    //     }
-                    // } else {
-                    //     window.close();
-                    // }
-                    //
-                    // var parentWindowURL = window.opener.location.href;
-                    // // console.log("parenturl", parentWindowURL);
-                    // // console.log("quizurl", quizurl);
-                    //
-                    // if(!parentWindowURL.includes(quizurl)){
-                    //     window.close();
-                    // }
-                    // if (parentWindowURL !== quizurl) {
-                    //     window.close();
-                    // }
-                    //
-                    // var share_state = window.opener.share_state;
-                    // var window_surface = window.opener.window_surface;
-                    // // Console.log('parent ss', share_state);
-                    // // console.log('parent ws', window_surface);
-                    //
-                    // if (share_state.value !== "true") {
-                    //     // Window.close();
-                    //     // console.log('close window now');
-                    //     window.close();
-                    // }
-                    //
-                    // if (window_surface.value !== 'monitor') {
-                    //     // Console.log('close window now');
-                    //     window.close();
-                    // }
-                    /////
-
-                    if (!cascadeClose) return;
-
-                    let finish = function(){
-                        clearInterval(cascadeClose);
-                        cascadeClose = null;
-                        d('finish');
-                        warning_alert('warning:keepparentwindowopen', window.close);
-                        //window.close();
-                    };
-
-                    //d('window status checking:');
-                    if (window.opener != null && !window.opener.closed){
-                        //d('window open')
-                    } else {
-                        //d('window closed');
-                        finish();
-                        return;
-                    }
-
-                    var parentWindowURL = window.opener.location.href;
-                    // d("parenturl", parentWindowURL);
-                    // d("quizurl", quizurl);
-
-                    if (!parentWindowURL.includes(quizurl)){
-                        finish(1);
-                        return;
-                    }
-
-                    if (parentWindowURL !== quizurl){
-                        finish();
-                        return;
-                    }
-                }
-
-
-
-                // $("#responseform").submit(function() {
-                //     var nextpageel = document.getElementsByName('nextpage');
-                //     var nextpagevalue = 0;
-                //     if (nextpageel.length > 0) {
-                //         nextpagevalue = nextpageel[0].value;
-                //     }
-                //     if (nextpagevalue === "-1") {
-                //         window.opener.screenoff.value = "1";
-                //     }
-                // });
 
                 return true;
             },
-            videoStartup: function(){
-                if (!video) find_elements();
+            videoStartup: function(fun_fail=null){
+                if (settings[SETTING_FINAL_DENY]) return false;
 
-                if (video) {
-                    let get_camera_fail = function(){
-                        isCameraAllowed = false;
-                        warning_alert('warning:cameraallowwarning');
-                        SA.hideButtons();
+                let res = null;
+                if (videoWebcam) {
+                    let get_camera_fail = function(...debug_data){
+                        if (debug_data) d(...debug_data);
+
+                        turnWebcam(false);
+                        warningAlert('warning:cameraallowwarning');
+                        res = false;
+                        if (fun_fail && typeof fun_fail === 'function') fun_fail();
                     };
 
                     if (navigator.mediaDevices){
+                        res = true;
                         navigator.mediaDevices.getUserMedia({video: true, audio: false})
-                            .then(function(stream) {
-                                video.srcObject = stream;
-                                video.play();
-                                isCameraAllowed = true;
-                                $("#allow_camera_btn").prop('disabled', 'disabled');
-                            })
-                            .catch(function() {
-                                get_camera_fail();
-                            });
+                            .then(stream => turnWebcam(true, stream))
+                            .catch(err => get_camera_fail('navigator.mediaDevices.getUserMedia error', err));
                     } else {
-                        get_camera_fail();
+                        get_camera_fail('No navigator.mediaDevices');
+                        return res;
                     }
 
+                    if (!videoWebcam[PLUGIN+'_init']){
+                        videoWebcam.addEventListener('canplay', function() {
+                            if (!videoWebcam.streaming){
+                                settings[SETTING_H] = videoWebcam.videoHeight / (videoWebcam.videoWidth / settings[SETTING_W]);
+                                // Firefox currently has a bug where the height can't be read from
+                                // The video, so we will make assumptions if this happens.
+                                if (isNaN(settings[SETTING_H])) {
+                                    settings[SETTING_H] = settings[SETTING_W] / (4 / 3);
+                                }
+                                videoWebcam.setAttribute('width', settings[SETTING_W]);
+                                videoWebcam.setAttribute('height', settings[SETTING_H]);
+                                canvas.setAttribute('width', settings[SETTING_W]);
+                                canvas.setAttribute('height', settings[SETTING_H]);
 
-                    video.addEventListener('canplay', function() {
-                        if (!streaming) {
-                            height = video.videoHeight / (video.videoWidth / width);
-                            // Firefox currently has a bug where the height can't be read from
-                            // The video, so we will make assumptions if this happens.
-                            if (isNaN(height)) {
-                                height = width / (4 / 3);
+                                videoWebcam.streaming = true;
                             }
-                            video.setAttribute('width', width);
-                            video.setAttribute('height', height);
-                            canvas.setAttribute('width', width);
-                            canvas.setAttribute('height', height);
-                            streaming = true;
-                        }
-                    }, false);
+                        }, false);
 
-                    // Allow to click picture
-                    video.addEventListener('click', function(ev) {
-                        SA.takepicture();
-                        ev.preventDefault();
-                    }, false);
+                        videoWebcam.addEventListener('suspend', () => updateWebcamStatus());
+                        videoWebcam.addEventListener('pause', () => updateWebcamStatus());
+
+                        videoWebcam[PLUGIN+'_init'] = true;
+                    }
                 } else {
-                    SA.hideButtons();
+                    res = false;
                 }
-                SA.clearphoto();
+
+                clearPhoto();
+                return res;
             },
-            setupAttempt: function(props) {
-                // $("body").attr("oncopy","return false;");
-                // $("body").attr("oncut","return false;");
-                // $("body").attr("onpaste","return false;");
-                // $("body").attr("oncontextmenu","return false;");
-                // console.log(props);
-                console.log(props.examurl);
-                var submitbtn = document.getElementById('id_submitbutton');
+            screenStartup: function(){
+                if (settings[SETTING_FINAL_DENY]) return false;
 
-                $("#id_submitbutton").css("display", "none");
-                var quizwindow;
-                var startbtn = $('<button disabled class="btn btn-primary" id="id_start_quiz">Start Quiz</button>').click(function () {
-                    // var url = props.examurl+'?attempt='+props.attemptid+'&cmid='+props.cmid;
+                let res = null
+                let get_screen_fail = function(...debug_data){
+                    if (debug_data) d(...debug_data);
 
-                    var sesskey = document.getElementsByName("sesskey")[0].value;
-                    var url = props.examurl+'?cmid='+props.cmid+'&sesskey='+sesskey;
-                    console.log('url',url);
-                    event.preventDefault();
-                    quizwindow = window.open(url, '_blank');
-                });
+                    turnScreen(false);
+                    warningAlert('warning:sharescreen');
+                    res = false;
+                };
 
-                // var quizlink = "<a href='http://www.google.com' target='_blank' class='btn btn-primary'>Start Quiz</a>";
-                $( "#id_submitbutton" ).after(startbtn);
+                if (!videoScreen) return res;
 
-                $("#allow_camera_btn").click(function(event){
-                    event.preventDefault();
-                    SA.videoStartup();
-                });
-
-                var enablesharescreen = props.enablescreenshare;
-                if (enablesharescreen){
-                    window.share_state = document.getElementById('share_state');
-                    window.window_surface = document.getElementById('window_surface');
-                    window.screenoff = document.getElementById('screen_off_flag');
-
-                    const videoElem = document.getElementById("video-screen");
-                    const logElem = document.getElementById("log-screen");
-                    var displayMediaOptions = {
+                if (navigator.mediaDevices){
+                    res = true;
+                    let displayMediaOptions = {
                         video: {
                             cursor: "always"
                         },
                         audio: false
                     };
-
-                    $("#share_screen_btn").click(function(event){
-                        event.preventDefault();
-                        // Console.log('screen sharing clicked');
-                        startCapture();
-                        $("#form_activate").css("visibility", "visible");
-                        // Options for getDisplayMedia()
-                    });
-
-                    async function startCapture() {
-                        logElem.innerHTML = "";
-                        try {
-                            // Console.log("vid found success");
-                            videoElem.srcObject = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
-                            dumpOptionsInfo();
-                            updateWindowStatus();
-                        } catch (err) {
-                            // Console.log("Error: " + err.toString());
-                            let errString = err.toString();
-                            if (errString == "NotAllowedError: Permission denied") {
-                                warning_alert('warning:sharescreen');
-                                return false;
-                            }
-                        }
+                    let supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
+                    if (supportedConstraints.displaySurface) {
+                        displayMediaOptions.video.displaySurface = DISPLAY_SURFACE;
                     }
 
-                    function dumpOptionsInfo() {
-                        // Const videoTrack = videoElem.srcObject.getVideoTracks()[0];
-
-                        // Console.info("Track settings:");
-                        // console.info(JSON.stringify(videoTrack.getSettings(), null, 2));
-                        // console.info("Track constraints:");
-                        // console.info(JSON.stringify(videoTrack.getConstraints(), null, 2));
-                    }
-
-                    $(window).on("beforeunload", function() {
-                        if (quizwindow) quizwindow.close();
-                    })
-
-                    window.addEventListener('locationchange', function(){
-                        console.log('location changed!');
-                        if (quizwindow) quizwindow.close();
-                    })
-
-                    var updateWindowStatus = function() {
-                        if (videoElem.srcObject !== null) {
-                            // Console.log(videoElem);
-                            const videoTrack = videoElem.srcObject.getVideoTracks()[0];
-                            var currentStream = videoElem.srcObject;
-                            var active = currentStream.active;
-                            var settings = videoTrack.getSettings();
-                            var displaySurface = settings.displaySurface;
-                            document.getElementById('window_surface').value = displaySurface;
-                            document.getElementById('display_surface').innerHTML = displaySurface;
-                            document.getElementById('share_screen_status').innerHTML = active;
-                            document.getElementById('share_state').value = active;
-                            var screenoff = document.getElementById('screen_off_flag').value;
-
-                            console.log(document.getElementById('window_surface'));
-                            if(displaySurface !== 'monitor'){
-                                // window close
-                                if (quizwindow) quizwindow.close();
-                                console.log('quiz window closed');
-                            }
-
-                            if(!active){
-                                if (quizwindow) quizwindow.close();
-                            }
-
-                            // if (screenoff == "1") {
-                            //     videoTrack.stop();
-                            //     quizwindow.close();
-                            //     console.log('quiz window closed');
-                            //     clearInterval(windowState);
-                            //     // location.reload();
-                            // }
-                        }
-                    };
-
-                    var takeScreenshot = function() {
-                        var screenoff = document.getElementById('screen_off_flag').value;
-                        if (videoElem.srcObject !== null) {
-                            // Console.log(videoElem);
-                            const videoTrack = videoElem.srcObject.getVideoTracks()[0];
-                            var currentStream = videoElem.srcObject;
-                            var active = currentStream.active;
-                            // Console.log(active);
-
-                            var settings = videoTrack.getSettings();
-                            var displaySurface = settings.displaySurface;
-
-                            if (screenoff == "0") {
-                                if (!active) {
-                                    warning_alert('warning:sorry:restartattempt');
-                                    document.getElementById('display_surface').innerHTML = displaySurface;
-                                    document.getElementById('share_screen_status').innerHTML = 'Disabled';
-                                    clearInterval(screenShotInterval);
-                                    // window.close();
-                                    if (quizwindow) quizwindow.close();
-                                    return false;
-                                }
-                                console.log(displaySurface);
-
-                                if (displaySurface !== "monitor") {
-                                    // console.log(displaySurface);
-                                    warning_alert('warning:sorry:sharescreen');
-                                    document.getElementById('display_surface').innerHTML = displaySurface;
-                                    document.getElementById('share_screen_status').innerHTML = 'Disabled';
-                                    clearInterval(screenShotInterval);
-                                    // window.close();
-                                    if (quizwindow) quizwindow.close();
-                                    return false;
-                                }
-
-                            }
-                            // Console.log(displaySurface);
-                            // console.log(quizurl);
-
-                            // Capture Screen
-                            var video_screen = document.getElementById('video-screen');
-                            var canvas_screen = document.getElementById('canvas-screen');
-                            var screen_context = canvas_screen.getContext('2d');
-                            // Var photo_screen = document.getElementById('photo_screen');
-                            canvas_screen.width = screen.width;
-                            canvas_screen.height = screen.height;
-                            screen_context.drawImage(video_screen, 0, 0, screen.width, screen.height);
-                            var screen_data = canvas_screen.toDataURL('image/png');
-                            // Photo_screen.setAttribute('src', screen_data);
-                            // console.log(screen_data);
-
-                            // API Call
-                            var wsfunction = 'quizaccess_proctoring_send_camshot';
-                            var params = {
-                                'courseid': props.courseid,
-                                'screenshotid': props.id,
-                                'quizid': props.cmid,
-                                'webcampicture': screen_data,
-                                'imagetype': 2
-                            };
-
-                            var request = {
-                                methodname: wsfunction,
-                                args: params
-                            };
-
-                            // Console.log('params', params);
-                            if (screenoff == "0") {
-                                Ajax.call([request])[0].done(function(data) {
-                                    if (data.warnings.length < 1) {
-                                        // NO; pictureCounter++;
-                                    } else {
-                                        if (video_screen) {
-                                            warning_alert('error:takingimage', null, true);
-                                            clearInterval(screenShotInterval);
-                                        }
-                                    }
-                                }).fail(Notification.exception);
-                            }
-                        }
-                    };
-
-                    var screenShotInterval = setInterval(takeScreenshot, props.screenshotinterval);
-                    var windowState = setInterval(updateWindowStatus, 1000);
+                    navigator.mediaDevices.getDisplayMedia(displayMediaOptions)
+                        .then(stream => turnScreen(true, stream))
+                        .catch(err => get_screen_fail('navigator.mediaDevices.getDisplayMedia error', err));
+                } else {
+                    get_screen_fail('No navigator.mediaDevices');
+                    return false;
                 }
 
-                $("#fcvalidate").click(function() {
+                if (!videoScreen[PLUGIN+'_init']){
+                    videoScreen.addEventListener('suspend', () => updateScreenStatus());
+                    videoScreen.addEventListener('pause', () => updateScreenStatus());
+
+                    videoScreen[PLUGIN+'_init'] = true;
+                }
+
+                return res;
+            },
+            setupBeforeAttempt: function(props) {
+                importSettings(props);
+                clearStorage();
+                updateAllow(false);
+
+                let $submitbutton = $("#id_submitbutton");
+                if (!$submitbutton.length){
+                    d('Error: no $submitbutton');
+                    updateAllow(false, true);
+                    return;
+                }
+                $submitbutton.prop('disabled', 1);
+                find_elements();
+
+                let $startbtn = $('<button class="btn btn-primary"></button>').prop('id', ID_START_QUIZ).prop('disabled', true);
+                $startbtn.click(function() {
                     event.preventDefault();
-                    // Console.log('validate face clicked');
-                    var context = canvas.getContext('2d');
-                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    var data = canvas.toDataURL('image/png');
-                    photo.setAttribute('src', data);
+                    if (!updateAllow()) return;
 
-                    var courseid = document.getElementById('courseidval').value;
-                    var cmid = document.getElementById('cmidval').value;
-                    var profileimage = document.getElementById('profileimage').value;
+                    let url = $submitbutton.closest('form').prop('action')+'?cmid='+settings[SETTING_CMID]+'&sesskey='+CFG.sesskey;
+                    quizwindow = window.open(url, '_blank');
+                });
+                $startbtn.text($submitbutton.text() || $submitbutton.val());
+                $submitbutton.after($startbtn);
 
-                    var wsfunction = 'quizaccess_proctoring_validate_face';
-                    var params = {
-                        'courseid': courseid,
-                        'cmid': cmid,
-                        'profileimage': profileimage,
-                        'webcampicture': data,
-                    };
+                $('#id_proctoring_checkbox').on('change', function() {
+                    settings[SETTING_BOX_ALLOWED] = !!this.checked;
+                    updateAllow();
+                });
 
-                    var request = {
-                        methodname: wsfunction,
-                        args: params
-                    };
-                    document.getElementById('loading_spinner').style.display = 'block';
-                    Ajax.call([request])[0].done(function(data) {
-                        if (data.warnings.length < 1) {
-                            document.getElementById('loading_spinner').style.display = 'none';
-                            // NO; pictureCounter++;
-                            // console.log('api response', data);
-                            var status = data.status;
-                            if (status == 'success') {
-                                $("#video").css("border", "10px solid green");
-                                $("#face_validation_result").html('<span style="color: green">True</span>');
-                                // Document.getElementById("validate_form").style.display = "none";
-                                document.getElementById("fcvalidate").style.display = "none";
-                                // console.log(enablesharescreen);
-                                if(enablesharescreen == 1){
-                                    document.getElementById("share_screen_btn").style.display = "block";
-                                }
-                                else{
-                                    $("#form_activate").css("visibility", "visible");
+                callAfterPageLoad(() => $(SELECTOR_QUIZ_START_BUTTON_DIV).addClass('shown'));
+
+                $("#"+ID_WEBCAM_BUTTON).click(function(event){
+                    event.preventDefault();
+                    API.videoStartup();
+                });
+                $("#id_cancel").click(function(){
+                    turnWebcam(false);
+                    turnScreen(false);
+
+                    settings[SETTING_FACE_ALLOWED] = false;
+                    $("#"+ID_FACE_BUTTON).removeClass('hidden');
+                    $("#"+ID_FACE_RESULT).html('');
+                });
+
+                webcamShotInterval = setInterval(takePictureInterval, settings[SETTING_CAMSHOT_DELAY] || INTERVAL_DELAY);
+                $(window).on("unload", finishAttempt);
+
+                if (settings[SETTING_SCR_ENABLE]){
+                    videoScreen = document.getElementById("video-screen");
+
+                    $("#"+ID_SCREEN_BUTTON).click(function(event){
+                        event.preventDefault();
+                        API.screenStartup();
+                    });
+
+                    screenShotInterval = setInterval(takeScreenshotInterval, settings[SETTING_CAMSHOT_DELAY] || INTERVAL_DELAY);
+                }
+
+                if (settings[SETTING_FACE_ENABLE]){
+                    $("#"+ID_FACE_BUTTON).click(function() {
+                        event.preventDefault();
+                        settings[SETTING_FACE_ALLOWED] = false;
+
+                        let context = canvas.getContext('2d');
+                        context.drawImage(videoWebcam, 0, 0, canvas.width, canvas.height);
+                        let data = canvas.toDataURL('image/png');
+                        photo.setAttribute('src', data);
+
+                        let courseid = settings[SETTING_COURSEID];
+                        let cmid = settings[SETTING_CMID]
+
+                        let wsfunction = 'quizaccess_proctoring_validate_face';
+                        let params = {
+                            'courseid': courseid,
+                            'cmid': cmid,
+                            'webcampicture': data,
+                        };
+
+                        let request = {
+                            methodname: wsfunction,
+                            args: params
+                        };
+                        document.getElementById('loading_spinner').style.display = 'block';
+                        Ajax.call([request])[0].done(function(data) {
+                            settings[SETTING_FACE_ALLOWED] = false;
+                            if (data.warnings.length < 1) {
+                                document.getElementById('loading_spinner').style.display = 'none';
+                                if (data.status === 'success') {
+                                    settings[SETTING_FACE_ALLOWED] = true;
+                                    $(videoWebcam).css("border", "10px solid green");
+                                    $("#"+ID_FACE_RESULT).html('<span style="color: green">True</span>');
+                                    $("#"+ID_FACE_BUTTON).addClass('hidden');
+                                } else {
+                                    $(videoWebcam).css("border", "10px solid red");
+                                    $("#"+ID_FACE_RESULT).html('<span style="color: red">False</span>');
                                 }
                             } else {
-                                $("#video").css("border", "10px solid red");
-                                $("#face_validation_result").html('<span style="color: red">False</span>');
+                                document.getElementById('loading_spinner').style.display = 'none';
+                                if (videoWebcam) {
+                                    warningAlert('error:takingimage', null, true);
+                                }
                             }
-                        } else {
-                            document.getElementById('loading_spinner').style.display = 'none';
-                            if (video) {
-                                warning_alert('error:takingimage', null, true);
-                            }
-                        }
-                    }).fail(Notification.exception);
+                            updateAllow();
+                        }).fail(Notification.exception);
 
-                });
+                    });
+                }
 
                 return true;
             },
         };
 
-        return SA;
+        return API;
     });

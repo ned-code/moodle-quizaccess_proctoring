@@ -208,14 +208,13 @@ define(['jquery'],
                                 var url_string = window.location.href
                                 var url = new URL(url_string);
                                 var cCourseId = url.searchParams.get("courseid");
-                                var cQuizId = url.searchParams.get("quizid");
                                 var cCmId = url.searchParams.get("cmid");
                                 var cStudentId = url.searchParams.get("studentid");
                                 var cReportId = url.searchParams.get("reportid");
                                 var rootUrl = url_string.split("report.php");
                                 // console.log(rootUrl[0]);
 
-                                var newUrl = rootUrl[0]+"analyzesingleimage.php?courseid="+cCourseId+"&quizid="+cQuizId+"&cmid="+cCmId+"&studentid="+cStudentId+"&reportid="+cReportId+"&imgid="+imgrowid;
+                                var newUrl = rootUrl[0]+"analyzesingleimage.php?courseid="+cCourseId+"&cmid="+cCmId+"&studentid="+cStudentId+"&reportid="+cReportId+"&imgid="+imgrowid;
                                 // console.log(newUrl);
                                 window.location.href = newUrl;
                             }

@@ -25,6 +25,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 require_once(__DIR__ . '/vendor/autoload.php');
+
+use quizaccess_proctoring\shared_lib as NED;
 use Aws\Rekognition\RekognitionClient;
 /**
  * Serve the files.
@@ -67,9 +69,12 @@ function quizaccess_proctoring_pluginfile($course, $cm, $context, $filearea, $ar
  */
 function update_match_result($rowid, $matchresult) {
     global $DB;
-    $score = (int)$matchresult;
-    $updatesql = "UPDATE {quizaccess_proctoring_logs} SET awsflag = 2, awsscore = '$score' WHERE id='$rowid'";
-    $DB->execute($updatesql);
+    $log = $DB->get_record(NED::TABLE_LOG, ['id' => $rowid]);
+    if ($log){
+        $log->awsflag = 2;
+        $log->awsscore = (int)$matchresult;
+        $DB->update_record(NED::TABLE_LOG, $log);
+    }
 }
 
 
@@ -82,9 +87,9 @@ function update_match_result($rowid, $matchresult) {
  */
 function check_similarity_aws($referenceimageurl, $targetimageurl) {
     global $DB;
-    $awskey = get_proctoring_settings('awskey');
-    $awssecret = get_proctoring_settings('awssecret');
-    $threshhold = (int) get_proctoring_settings('awsfcthreshold');
+    $awskey = NED::get_config('awskey');
+    $awssecret = NED::get_config('awssecret');
+    $threshhold = (int)NED::get_config('awsfcthreshold');
 
     $credentials = new Aws\Credentials\Credentials($awskey, $awssecret);
     $rekognitionclient = RekognitionClient::factory(array(
@@ -113,21 +118,18 @@ function check_similarity_aws($referenceimageurl, $targetimageurl) {
 
 /**
  * Execute facerecognition task.
- *
- * @return bool false if no record found.
  */
 function execute_fm_task() {
     global $DB;
     // Get 5 task.
-    $sql = "SELECT * FROM {proctoring_facematch_task} LIMIT 5";
-    $data = $DB->get_recordset_sql($sql);
-    $facematchmethod = get_proctoring_settings("fcmethod");
-    foreach ($data as $row) {
+    $data = $DB->get_recordset(NED::TABLE_FACEMATCH, [], '', '*', 0, 5);
+    $facematchmethod = NED::get_config("fcmethod");
+    foreach ($data as $row){
         $rowid = $row->id;
         $reportid = $row->reportid;
         $refimageurl = $row->refimageurl;
         $targetimageurl = $row->targetimageurl;
-        if ($facematchmethod == "AWS") {
+        if ($facematchmethod == "AWS"){
             // Get Match result.
             $similarityresult = check_similarity_aws($refimageurl, $targetimageurl);
 
@@ -149,8 +151,8 @@ function execute_fm_task() {
             }
             update_match_result($reportid, $similarity);
             // Delete from task table.
-            $DB->delete_records('proctoring_facematch_task', array('id' => $rowid));
-        } else if ($facematchmethod == "BS") {
+            $DB->delete_records(NED::TABLE_FACEMATCH, ['id' => $rowid]);
+        } elseif ($facematchmethod == "BS"){
             $similarityresult = check_similarity_bs($refimageurl, $targetimageurl);
             $jsonarray = json_decode($similarityresult, true);
             // Update Match result.
@@ -167,7 +169,7 @@ function execute_fm_task() {
             }
             update_match_result($reportid, $similarity);
             // Delete from task table.
-            $DB->delete_records('proctoring_facematch_task', array('id' => $rowid));
+            $DB->delete_records(NED::TABLE_FACEMATCH, ['id' => $rowid]);
         } else {
             echo "Invalid fc method<br/>";
         }
@@ -181,13 +183,12 @@ function execute_fm_task() {
  */
 function log_facematch_task() {
     global $DB;
-    $sql = "SELECT DISTINCT courseid,quizid,userid FROM {quizaccess_proctoring_logs}  WHERE awsflag = 0";
-    $data = $DB->get_recordset_sql($sql);
+    $data = $DB->get_recordset(NED::TABLE_LOG, ['awsflag' => 0], '', "DISTINCT courseid, cmid, userid");
     foreach ($data as $row) {
         $courseid = $row->courseid;
-        $quizid = $row->quizid;
+        $cmid = $row->cmid;
         $userid = $row->userid;
-        log_specific_quiz($courseid, $quizid, $userid);
+        log_specific_quiz($courseid, $cmid, $userid);
     }
 
     echo "Log success";
@@ -210,14 +211,11 @@ function log_specific_quiz($courseid, $cmid, $studentid) {
         $profileimageurl = new moodle_url('/user/pix.php/'.$user->id.'/f1.jpg');
     }
     // Update all as attempted.
-    $updatesql = "UPDATE {quizaccess_proctoring_logs}"
-                ."SET awsflag = 1"
-                ."WHERE courseid = '$courseid' AND quizid = '$cmid' AND userid = '$studentid'";
-    $DB->execute($updatesql);
+    $DB->set_field(NED::TABLE_LOG, 'awsflag', '1', ['courseid' => $courseid, 'cmid' => $cmid, 'userid' => $studentid]);
 
     // Check random.
     $limit = 5;
-    $awschecknumber = get_proctoring_settings('awschecknumber');
+    $awschecknumber = NED::get_config('awschecknumber');
     if ($awschecknumber != "") {
         $limit = (int) $awschecknumber;
     }
@@ -225,20 +223,20 @@ function log_specific_quiz($courseid, $cmid, $studentid) {
     if ($limit == -1) {
         $sql = " SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status, "
         ." e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email "
-        ." from {quizaccess_proctoring_logs} e INNER JOIN {user} u  ON u.id = e.userid "
-        ." WHERE e.courseid = '$courseid' AND e.quizid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != '' ";
+        ." FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid "
+        ." WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != '' ";
     } else if ($limit > 0) {
         $sql = " SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status, "
         ." e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email "
-        ." from {quizaccess_proctoring_logs} e INNER JOIN {user} u  ON u.id = e.userid "
-        ." WHERE e.courseid = '$courseid' AND e.quizid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != '' "
+        ." FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid "
+        ." WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != '' "
         ." ORDER BY RAND() "
         ." LIMIT $limit ";
     } else {
         $sql = " SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status, "
         ." e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email "
-        ." from {quizaccess_proctoring_logs} e INNER JOIN {user} u  ON u.id = e.userid "
-        ." WHERE e.courseid = '$courseid' AND e.quizid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != ''";
+        ." FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid "
+        ." WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != ''";
     }
 
     $sqlexecuted = $DB->get_recordset_sql($sql);
@@ -253,7 +251,7 @@ function log_specific_quiz($courseid, $cmid, $studentid) {
             $inserttaskrow->targetimageurl = $snapshot;
             $inserttaskrow->reportid = $reportid;
             $inserttaskrow->timemodified = time();
-            $DB->insert_record('proctoring_facematch_task', $inserttaskrow);
+            $DB->insert_record(NED::TABLE_FACEMATCH, $inserttaskrow);
         }
     }
     return true;
@@ -276,14 +274,11 @@ function aws_analyze_specific_quiz($courseid, $cmid, $studentid) {
         $profileimageurl = new moodle_url('/user/pix.php/'.$user->id.'/f1.jpg');
     }
     // Update all as attempted.
-    $updatesql = " UPDATE {quizaccess_proctoring_logs} "
-                ." SET awsflag = 1 "
-                ." WHERE courseid = '$courseid' AND quizid = '$cmid' AND userid = '$studentid' AND awsflag = 0 ";
-    $DB->execute($updatesql);
+    $DB->set_field(NED::TABLE_LOG, 'awsflag', '1', ['courseid' => $courseid, 'cmid' => $cmid, 'userid' => $studentid, 'awsflag' => 0]);
 
     // Check random.
     $limit = 5;
-    $awschecknumber = get_proctoring_settings('awschecknumber');
+    $awschecknumber = NED::get_config('awschecknumber');
     if ($awschecknumber != "") {
         $limit = (int)$awschecknumber;
     }
@@ -291,20 +286,20 @@ function aws_analyze_specific_quiz($courseid, $cmid, $studentid) {
     if ($limit == -1) {
         $sql = " SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status, "
         ." e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email "
-        ." from {quizaccess_proctoring_logs} e INNER JOIN {user} u  ON u.id = e.userid "
-        ." WHERE e.courseid = '$courseid' AND e.quizid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != '' ";
+        ." FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid "
+        ." WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != '' ";
     } else if ($limit > 0) {
         $sql = " SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status, "
         ." e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email "
-        ." from {quizaccess_proctoring_logs} e INNER JOIN {user} u  ON u.id = e.userid "
-        ." WHERE e.courseid = '$courseid' AND e.quizid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != '' "
+        ." FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid "
+        ." WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != '' "
         ." ORDER BY RAND() "
         ." LIMIT $limit";
     } else {
         $sql = " SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status, "
         ." e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email "
-        ." from {quizaccess_proctoring_logs} e INNER JOIN {user} u  ON u.id = e.userid "
-        ." WHERE e.courseid = '$courseid' AND e.quizid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != ''";
+        ." FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid "
+        ." WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != ''";
     }
 
     $sqlexecuted = $DB->get_recordset_sql($sql);
@@ -353,14 +348,11 @@ function bs_analyze_specific_quiz($courseid, $cmid, $studentid) {
         $profileimageurl = new moodle_url('/user/pix.php/'.$user->id.'/f1.jpg');
     }
     // Update all as attempted.
-    $updatesql = "UPDATE {quizaccess_proctoring_logs}"
-                ." SET awsflag = 1 "
-                ." WHERE courseid = '$courseid' AND quizid = '$cmid' AND userid = '$studentid' AND awsflag = 0";
-    $DB->execute($updatesql);
+    $DB->set_field(NED::TABLE_LOG, 'awsflag', '1', ['courseid' => $courseid, 'cmid' => $cmid, 'userid' => $studentid, 'awsflag' => 0]);
 
     // Check random.
     $limit = 5;
-    $awschecknumber = get_proctoring_settings('awschecknumber');
+    $awschecknumber = NED::get_config('awschecknumber');
     if ($awschecknumber != "") {
         $limit = (int)$awschecknumber;
     }
@@ -368,20 +360,20 @@ function bs_analyze_specific_quiz($courseid, $cmid, $studentid) {
     if ($limit == -1) {
         $sql = "SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status,
         e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email
-        from {quizaccess_proctoring_logs} e INNER JOIN {user} u  ON u.id = e.userid
-        WHERE e.courseid = '$courseid' AND e.quizid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != ''";
+        FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid
+        WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != ''";
     } else if ($limit > 0) {
         $sql = "SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status,
         e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email
-        from {quizaccess_proctoring_logs} e INNER JOIN {user} u  ON u.id = e.userid
-        WHERE e.courseid = '$courseid' AND e.quizid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != ''
+        FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid
+        WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != ''
         ORDER BY RAND()
         LIMIT $limit";
     } else {
         $sql = "SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status,
         e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email
-        from {quizaccess_proctoring_logs} e INNER JOIN {user} u  ON u.id = e.userid
-        WHERE e.courseid = '$courseid' AND e.quizid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != ''";
+        FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid
+        WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != ''";
     }
 
     $sqlexecuted = $DB->get_recordset_sql($sql);
@@ -412,27 +404,6 @@ function bs_analyze_specific_quiz($courseid, $cmid, $studentid) {
 }
 
 /**
- * Get proctoring settings values.
- *
- * @param String $settingtype the courseid.
- * @return String.
- */
-function get_proctoring_settings($settingtype) {
-    $value = "";
-    global $DB;
-    $settingssql = "SELECT * FROM {config_plugins}
-            WHERE plugin = 'quizaccess_proctoring' AND name = '$settingtype'";
-    $settingsdata = $DB->get_records_sql($settingssql);
-    if (count($settingsdata) > 0) {
-        foreach ($settingsdata as $row) {
-            $value = $row->value;
-        }
-    }
-    return $value;
-}
-
-
-/**
  * Analyze specific image.
  *
  * @param int $reportid the context.
@@ -440,13 +411,12 @@ function get_proctoring_settings($settingtype) {
  */
 function aws_analyze_specific_image($reportid) {
     global $DB;
-    $reportsql = "SELECT id,courseid,quizid,userid,webcampicture FROM {quizaccess_proctoring_logs} WHERE id=:id";
-    $reportdata = $DB->get_record_sql($reportsql, array("id" => $reportid));
+    $reportdata = $DB->get_record(NED::TABLE_LOG, ['id' => $reportid], "id, courseid, cmid, userid, webcampicture");
 
     if ($reportdata) {
         $studentid = $reportdata->userid;
         $courseid = $reportdata->courseid;
-        $cmid = $reportdata->quizid;
+        $cmid = $reportdata->cmid;
         $targetimage = $reportdata->webcampicture;
 
         // Get user profile image.
@@ -456,10 +426,7 @@ function aws_analyze_specific_image($reportid) {
             $profileimageurl = new moodle_url('/user/pix.php/'.$user->id.'/f1.jpg');
         }
         // Update all as attempted.
-        $updatesql = "UPDATE {quizaccess_proctoring_logs}
-                SET awsflag = 1
-                WHERE courseid = '$courseid' AND quizid = '$cmid' AND userid = '$studentid' AND awsflag = 0";
-        $DB->execute($updatesql);
+        $DB->set_field(NED::TABLE_LOG, 'awsflag', '1', ['courseid' => $courseid, 'cmid' => $cmid, 'userid' => $studentid, 'awsflag' => 0]);
 
         $similarityresult = check_similarity_aws($profileimageurl, $targetimage);
         // Log AWS API Call.
@@ -491,13 +458,12 @@ function aws_analyze_specific_image($reportid) {
  */
 function bs_analyze_specific_image($reportid) {
     global $DB;
-    $reportsql = "SELECT id,courseid,quizid,userid,webcampicture FROM {quizaccess_proctoring_logs} WHERE id=:id";
-    $reportdata = $DB->get_record_sql($reportsql, array("id" => $reportid));
+    $reportdata = $DB->get_record(NED::TABLE_LOG, ['id' => $reportid], "id, courseid, cmid, userid, webcampicture");
 
     if ($reportdata) {
         $studentid = $reportdata->userid;
         $courseid = $reportdata->courseid;
-        $cmid = $reportdata->quizid;
+        $cmid = $reportdata->cmid;
         $targetimage = $reportdata->webcampicture;
 
         // Get user profile image.
@@ -507,10 +473,7 @@ function bs_analyze_specific_image($reportid) {
             $profileimageurl = new moodle_url('/user/pix.php/'.$user->id.'/f1.jpg');
         }
         // Update all as attempted.
-        $updatesql = "UPDATE {quizaccess_proctoring_logs}
-                SET awsflag = 1
-                WHERE courseid = '$courseid' AND quizid = '$cmid' AND userid = '$studentid' AND awsflag = 0";
-        $DB->execute($updatesql);
+        $DB->set_field(NED::TABLE_LOG, 'awsflag', '1', ['courseid' => $courseid, 'cmid' => $cmid, 'userid' => $studentid, 'awsflag' => 0]);
 
         $similarityresult = check_similarity_bs($profileimageurl, $targetimage);
         $jsonarray = json_decode($similarityresult, true);
@@ -537,7 +500,7 @@ function bs_analyze_specific_image($reportid) {
  * Analyze specific image.
  *
  * @param int $reportid the context.
- * @param String $response the context.
+ * @param string $apiresponse the context.
  * @return bool false if no record found.
  */
 function log_aws_api_call($reportid, $apiresponse) {
@@ -547,8 +510,7 @@ function log_aws_api_call($reportid, $apiresponse) {
     $log->apiresponse = $apiresponse;
     $log->timecreated = time();
 
-    $insert = $DB->insert_record('aws_api_log', $log);
-    return $insert;
+    return $DB->insert_record(NED::TABLE_AWS, $log);
 }
 
 /**
@@ -560,8 +522,8 @@ function log_aws_api_call($reportid, $apiresponse) {
  */
 function check_similarity_bs($referenceimageurl, $targetimageurl) {
     global $CFG;
-    $bsapi = get_proctoring_settings('bsapi');
-    $bstoken = get_proctoring_settings('bstoken');
+    $bsapi = NED::get_config('bsapi');
+    $bstoken = NED::get_config('bstoken');
 
     // Load File.
     $image1 = basename($referenceimageurl);
@@ -601,31 +563,21 @@ function check_similarity_bs($referenceimageurl, $targetimageurl) {
  */
 function log_fm_warning($reportid) {
     global $DB;
-    $reportsql = "SELECT * FROM {quizaccess_proctoring_logs} WHERE id=:id";
-    $reportdata = $DB->get_record_sql($reportsql, array("id" => $reportid));
+    $reportdata = $DB->get_record(NED::TABLE_LOG, ['id' => $reportid]);
 
     if ($reportdata) {
         $userid = $reportdata->userid;
         $courseid = $reportdata->courseid;
-        $quizid = $reportdata->quizid;
-        $warningsql = "SELECT * FROM {proctoring_fm_warnings} WHERE userid = :userid AND courseid = :courseid AND quizid = :quizid";
-
-        $params = array();
-        $params["userid"] = $userid;
-        $params["courseid"] = $courseid;
-        $params["quizid"] = $quizid;
+        $cmid = $reportdata->cmid;
 
         // Check availability.
-        $warnings = $DB->get_record_sql($warningsql, $params);
+        $params = ['userid' => $userid, 'courseid' => $courseid, 'cmid' => $cmid];
+        $warnings = $DB->get_record(NED::TABLE_WARNINGS, $params);
 
         // If does not exists.
         if (!$warnings) {
-            $warning = new stdClass();
-            $warning->reportid = $reportid;
-            $warning->courseid = $courseid;
-            $warning->quizid = $quizid;
-            $warning->userid = $userid;
-            $DB->insert_record('proctoring_fm_warnings', $warning);
+            $params['reportid'] = $reportid;
+            $DB->insert_record(NED::TABLE_WARNINGS, (object)$params);
         }
     }
 }

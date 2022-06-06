@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+use quizaccess_proctoring\shared_lib as NED;
+
 require_once(__DIR__ . '/../../../../config.php');
 
 require_once($CFG->libdir.'/filelib.php');
@@ -29,10 +31,9 @@ list ($course, $cm) = get_course_and_cm_from_cmid($cmid, 'quiz');
 
 require_login($course, true, $cm);
 
-$fcmethod = get_proctoring_settings("fcmethod");
+$fcmethod = NED::get_config("fcmethod");
 $params = array(
     "courseid" => $courseid,
-    "quizid" => $cmid,
     "cmid" => $cmid,
     "studentid" => $studentid,
     "reportid" => $reportid

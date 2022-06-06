@@ -25,6 +25,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+use \quizaccess_proctoring\shared_lib as NED;
+
 global $CFG;
 require_once($CFG->dirroot . '/mod/quiz/accessrule/proctoring/rule.php');
 require_once($CFG->dirroot . '/mod/quiz/accessrule/proctoring/lib.php');
@@ -81,11 +83,11 @@ class quizaccess_proctoring_testcase extends basic_testcase {
      */
     public function test_log_aws_api_call() {
         global $DB;
-        $reportid = 0; 
+        $reportid = 0;
         $apiresponse = "{ test: success }";
         log_aws_api_call($reportid, $apiresponse);
-        
-        $log = $DB->get_records('aws_api_log', array('reportid' => $reportid));
+
+        $log = $DB->get_records(NED::TABLE_AWS, ['reportid' => $reportid]);
         $count = count($log);
         $this->assertEquals($count, 1);
     }
@@ -111,7 +113,7 @@ class quizaccess_proctoring_testcase extends basic_testcase {
         $quiz->id = 0;
         $quiz->proctoringrequired = 1;
         save_settings($quiz);
-        $this->assertEquals($DB->record_exists('quizaccess_proctoring', array('quizid' => 0)), true);
+        $this->assertEquals($DB->record_exists(NED::TABLE_QP, ['quizid' => 0]), true);
     }
 
     /**

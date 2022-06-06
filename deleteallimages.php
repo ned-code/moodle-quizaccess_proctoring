@@ -22,6 +22,9 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later.
  */
 require_once(__DIR__ . '/../../../../config.php');
+
+use quizaccess_proctoring\shared_lib as NED;
+
 // No guest autologin.
 require_login(0, false);
 
@@ -37,12 +40,14 @@ require_capability('quizaccess/proctoring:deletecamshots', $context);
 $pageurl = new moodle_url('/mod/quiz/accessrule/proctoring/externalsettings.php');
 $PAGE->set_url($pageurl);
 
-$DB->delete_records('quizaccess_proctoring_logs');
-$DB->delete_records('proctoring_screenshot_logs');
+$DB->delete_records(NED::TABLE_LOG);
+$DB->delete_records(NED::TABLE_SCREENSHOT);
 // Delete users file (webcam images).
-$filesql = 'SELECT * FROM {files} WHERE component = \'quizaccess_proctoring\' AND filearea = \'picture\'';
-
-$usersfile = $DB->get_records_sql($filesql);
+$params = [
+    'component' => NED::PLUGIN_NAME,
+    'filearea' => 'picture',
+];
+$usersfile = $DB->get_records('files', $params);
 
 $fs = get_file_storage();
 foreach ($usersfile as $file):
@@ -65,4 +70,4 @@ foreach ($usersfile as $file):
     }
 endforeach;
 $url = new moodle_url('/');
-redirect($url, get_string('settings:deleteallsuccess', 'quizaccess_proctoring'), -11, 'success');
+redirect($url, NED::str('settings:deleteallsuccess'), -11, 'success');

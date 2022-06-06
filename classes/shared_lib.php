@@ -21,6 +21,13 @@ class shared_lib extends \quizaccess_proctoring\shared\base_class {
 
     const PLUGIN_NAME = 'quizaccess_proctoring';
 
+    const TABLE_QP          = 'quizaccess_proctoring';
+    const TABLE_LOG         = 'quizaccess_proctoring_logs';
+    const TABLE_SCREENSHOT  = 'quizaccess_proctoring_screen';
+    const TABLE_WARNINGS    = 'quizaccess_proctoring_warns';
+    const TABLE_FACEMATCH   = 'quizaccess_proctoring_face';
+    const TABLE_AWS         = 'quizaccess_proctoring_aws';
+
     const CLASS_CONTAINER = self::PLUGIN_NAME.'-container';
     const CLASS_ROW = self::PLUGIN_NAME.'-row';
     const CLASS_COL = self::PLUGIN_NAME.'-col';

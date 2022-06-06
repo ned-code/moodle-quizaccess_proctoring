@@ -24,6 +24,7 @@
 
 namespace quizaccess_proctoring\privacy;
 
+use quizaccess_proctoring\shared_lib as NED;
 use coding_exception;
 use context;
 use core_privacy\local\metadata\collection;
@@ -57,7 +58,7 @@ class provider implements
     public static function get_metadata(collection $collection): collection {
         $quizaccessproctoringlogs = [
             'courseid' => 'privacy:metadata:courseid',
-            'quizid' => 'privacy:metadata:quizid',
+            'cmid' => 'privacy:metadata:cmid',
             'userid' => 'privacy:metadata:userid',
             'webcampicture' => 'privacy:metadata:webcampicture',
             'status' => 'privacy:metadata:status',
@@ -65,7 +66,7 @@ class provider implements
         ];
 
         $collection->add_database_table(
-            'quizaccess_proctoring_logs',
+            NED::TABLE_LOG,
             $quizaccessproctoringlogs,
             'privacy:metadata:quizaccess_proctoring_logs'
         );
@@ -90,13 +91,13 @@ class provider implements
 
         // Context in Quizaccess proctoring logs.
         $sql = "SELECT DISTINCT c.id
-                  FROM {quizaccess_proctoring_logs} qpl
-                  JOIN {context} c ON c.instanceid = qpl.quizid AND c.contextlevel = :context
+                  FROM {".NED::TABLE_LOG."} qpl
+                  JOIN {context} c ON c.instanceid = qpl.cmid AND c.contextlevel = :context
                   WHERE qpl.userid = :userid
               GROUP BY c.id";
         $contextlist = new contextlist();
         $contextlist->add_from_sql($sql, $params);
-        $fileparams = ['component' => 'quizaccess_proctoring', 'userid' => $userid];
+        $fileparams = ['component' => NED::PLUGIN_NAME, 'userid' => $userid];
 
         $sqlfile = "SELECT DISTINCT contextid as id
                     FROM {files}
@@ -116,13 +117,13 @@ class provider implements
 
         // The data is associated at the quiz module context level, so retrieve the user's context id.
         $sql = "SELECT DISTINCT qpl.userid AS userid
-                  FROM {quizaccess_proctoring_logs} qpl
-                  JOIN {course_modules} cm ON cm.id = qpl.quizid
+                  FROM {".NED::TABLE_LOG."} qpl
+                  JOIN {course_modules} cm ON cm.id = qpl.cmid
                  WHERE cm.id = ?";
         $params = [$context->instanceid];
         $userlist->add_from_sql('userid', $sql, $params);
 
-        $fileparams = ['component' => 'quizaccess_proctoring', 'contextid' => $context->id];
+        $fileparams = ['component' => NED::PLUGIN_NAME, 'contextid' => $context->id];
         $sqlfile = "SELECT DISTINCT userid
                     FROM {files}
                     WHERE component = :component
@@ -149,14 +150,14 @@ class provider implements
                     // Quiz access proctoring logs.
                     $sql = "SELECT qpl.id as id,
                        qpl.courseid as courseid,
-                       qpl.quizid as quizid,
+                       qpl.cmid as cmid,
                        qpl.userid as userid,
                        qpl.webcampicture as webcampicture,
                        qpl.status as status,
                        qpl.timemodified as timemodified
-                  FROM {quizaccess_proctoring_logs} qpl
-                 WHERE qpl.quizid {$insql} AND qpl.userid =:userid
-                 ORDER BY qpl.id ASC";
+                    FROM {".NED::TABLE_LOG."} qpl
+                    WHERE qpl.cmid {$insql} AND qpl.userid =:userid
+                    ORDER BY qpl.id ASC";
 
                     $qaplogs = $DB->get_records_sql($sql, $params);
                     $index = 0;
@@ -164,7 +165,7 @@ class provider implements
                         // Data export is organised in: {Context}/{Plugin Name}/{Table name}/{index}/data.json.
                         $index++;
                         $subcontext = [
-                            get_string('quizaccess_proctoring', 'quizaccess_proctoring'),
+                            NED::str('quizaccess_proctoring'),
                             'proctoring_logs',
                             $index
                         ];
@@ -172,7 +173,7 @@ class provider implements
                         $data = (object)[
                             'id' => $qaplog->id,
                             'courseid' => $qaplog->courseid,
-                            'quizid' => $qaplog->quizid,
+                            'cmid' => $qaplog->cmid,
                             'userid' => $qaplog->userid,
                             'webcampicture' => $qaplog->webcampicture,
                             'status' => $qaplog->status,
@@ -186,8 +187,8 @@ class provider implements
                         if (!empty($webcamepiclast)) {
                             $userfiles = $DB->get_record('files', $paramfile);
                             writer::with_context($context)
-                                ->export_area_files([get_string('privacy:core_files', 'quizaccess_proctoring')],
-                                    'quizaccess_proctoring', 'picture', $userfiles->itemid
+                                ->export_area_files([NED::str('privacy:core_files')],
+                                    NED::PLUGIN_NAME, 'picture', $userfiles->itemid
                                 )->export_data($subcontext, $data);
                         } else {
                             writer::with_context($context)
@@ -210,18 +211,15 @@ class provider implements
     public static function delete_data_for_all_users_in_context(context $context) {
         global $DB;
 
-        // Sanity check that context is at the module context level, then get the quizid.
+        // Sanity check that context is at the module context level, then get the cmid.
         if ($context->contextlevel === CONTEXT_MODULE) {
             $cmid = $context->instanceid;
-            $quizid = $DB->get_field('course_modules', 'instance', ['id' => $cmid]);
-
-            $params['quizid'] = $quizid;
-            $DB->set_field_select('quizaccess_proctoring_logs', 'userid', 0, "quizid = :quizid", $params);
+            $DB->set_field(NED::TABLE_LOG, 'userid', 0, ['cmid' => $cmid]);
         }
 
         // Delete all of the webcam images for this user.
         $fs = get_file_storage();
-        $fs->delete_area_files($context->id, 'quizaccess_proctoring', 'picture');
+        $fs->delete_area_files($context->id, NED::PLUGIN_NAME, 'picture');
     }
 
     /**
@@ -240,15 +238,14 @@ class provider implements
             $userids = $userlist->get_userids();
             list($insql, $inparams) = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED);
 
-            $DB->set_field_select('quizaccess_proctoring_logs', 'userid', 0, "userid {$insql}", $inparams);
+            $DB->set_field_select(NED::TABLE_LOG, 'userid', 0, "userid {$insql}", $inparams);
 
             // Delete users file (webcam images).
-            $filesql = "SELECT * FROM {files} WHERE userid {$insql}";
-            $usersfile = $DB->get_records_sql($filesql, $inparams);
+            $usersfile = $DB->get_records_select('files', "userid {$insql}", $inparams);
 
             $fs = get_file_storage();
             foreach ($usersfile as $file):
-                $fs->delete_area_files($context->id, 'quizaccess_proctoring', 'picture', $file->id);
+                $fs->delete_area_files($context->id, NED::PLUGIN_NAME, 'picture', $file->id);
             endforeach;
 
         }
@@ -269,14 +266,15 @@ class provider implements
             return;
         }
 
-        $params['userid'] = $contextlist->get_user()->id;
-        $DB->set_field_select('quizaccess_proctoring_logs', 'userid', 0, "userid = :userid", $params);
+        $params = ['userid' => $contextlist->get_user()->id];
+        $DB->set_field(NED::TABLE_LOG, 'userid', 0, $params);
+
         foreach ($contextlist as $context) {
             // Delete user file (webcam images).
             $userfiles = $DB->get_records('files', $params);
             $fs = get_file_storage();
             foreach ($userfiles as $file):
-                $fs->delete_area_files($context->id, 'quizaccess_proctoring', 'picture', $file->itemid);
+                $fs->delete_area_files($context->id, NED::PLUGIN_NAME, 'picture', $file->itemid);
             endforeach;
         }
     }
