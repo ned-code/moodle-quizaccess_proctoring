@@ -24,7 +24,7 @@
 
 
 defined('MOODLE_INTERNAL') || die();
-require_once(__DIR__ . '/vendor/autoload.php');
+require_once($CFG->dirroot . '/local/aws/sdk/aws-autoloader.php');
 
 use quizaccess_proctoring\shared_lib as NED;
 use Aws\Rekognition\RekognitionClient;
