@@ -110,6 +110,7 @@ class helper {
     /**
      * Get proctoring config content for a particular quiz. This method checks caps.
      *
+     *
      * @param string $cmid The course module ID for a quiz with config.
      * @return string SEB config string.
      */
@@ -120,6 +121,9 @@ class helper {
         // Make sure the user is logged in and has access to the module.
         require_login($cm->course, false, $cm);
 
+        return '';
+
+        //TODO check this config, as it doesn't work
         // Retrieve the config for quiz.
         $config = quiz_settings::get_config_by_quiz_id($cm->instance);
         if (empty($config)) {

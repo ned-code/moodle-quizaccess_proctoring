@@ -6,7 +6,6 @@
  * @copyright  2021 NED {@link http://ned.ca}
  * @author     NED {@link http://ned.ca}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @noinspection DuplicatedCode
  */
 
 namespace quizaccess_proctoring\shared;

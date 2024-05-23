@@ -246,8 +246,8 @@ class addtional_settings_helper {
                     'filename' => $filename,
                 ];
                 $usersfiles = $DB->get_records('files', $params);
-                foreach ($usersfiles as $row) {
-                    $this->deletefile($row);
+                foreach ($usersfiles as $u_row) {
+                    $this->deletefile($u_row);
                 }
             }
         }
@@ -327,8 +327,8 @@ class addtional_settings_helper {
                     'filename' => $filename,
                 ];
                 $usersfiles = $DB->get_records('files', $params);
-                foreach ($usersfiles as $row) {
-                    $this->deletefile($row);
+                foreach ($usersfiles as $u_row) {
+                    $this->deletefile($u_row);
                 }
             }
         }
