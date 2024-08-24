@@ -137,7 +137,7 @@ trait plugin_dependencies {
         }
 
         if (empty(static::$PLUGIN_PATH)){
-            print_error("Can't find plugin directory!");
+            static::print_simple_error("Can't find plugin directory!");
         }
 
         static::$PLUGIN = basename(static::$PLUGIN_PATH);

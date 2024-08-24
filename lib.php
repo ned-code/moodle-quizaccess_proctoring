@@ -92,11 +92,11 @@ function check_similarity_aws($referenceimageurl, $targetimageurl) {
     $threshhold = (int)NED::get_config('awsfcthreshold');
 
     $credentials = new Aws\Credentials\Credentials($awskey, $awssecret);
-    $rekognitionclient = RekognitionClient::factory(array(
+    $rekognitionclient = new RekognitionClient([
         'region'    => "us-east-1",
         'version'   => 'latest',
         'credentials' => $credentials
-    ));
+    ]);
 
     try {
         $comparefaceresult = $rekognitionclient->compareFaces([

@@ -432,7 +432,7 @@ trait moodle_util {
      */
     static public function print_simple_error($title, $debug_info=null){
         $debug_info = $debug_info ? static::arr2str($debug_info, '', "\n") : $debug_info;
-        \print_error(' '.$title, 'error', '', null, $debug_info);
+        throw new \moodle_exception($title, 'error', '', null, $debug_info);
     }
 
     /**
