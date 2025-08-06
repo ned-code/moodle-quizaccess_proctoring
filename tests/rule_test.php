@@ -42,7 +42,7 @@ class quizaccess_proctoring_testcase extends basic_testcase {
     /**
      * Test case to check the rule basics
      */
-    public function test_proctoring_access_rule() {
+    public function test_proctoring_access_rule(){
         $quiz = new stdClass();
         $cm = new stdClass();
         $cm->id = 0;
@@ -63,7 +63,7 @@ class quizaccess_proctoring_testcase extends basic_testcase {
      *
      * @throws coding_exception
      */
-    public function test_validate_preflight_check() {
+    public function test_validate_preflight_check(){
         $quiz = new stdClass();
         $cm = new stdClass();
         $cm->id = 0;
@@ -81,7 +81,7 @@ class quizaccess_proctoring_testcase extends basic_testcase {
      *
      * @throws coding_exception
      */
-    public function test_log_aws_api_call() {
+    public function test_log_aws_api_call(){
         global $DB;
         $reportid = 0;
         $apiresponse = "{ test: success }";
@@ -97,7 +97,7 @@ class quizaccess_proctoring_testcase extends basic_testcase {
      *
      * @throws coding_exception
      */
-    public function test_description() {
+    public function test_description(){
         $description = description();
         $this->assertEquals(gettype ($description), 'array');
     }
@@ -107,7 +107,7 @@ class quizaccess_proctoring_testcase extends basic_testcase {
      *
      * @throws coding_exception
      */
-    public function test_save_settings() {
+    public function test_save_settings(){
         global $DB;
         $quiz = new stdClass();
         $quiz->id = 0;
@@ -121,7 +121,7 @@ class quizaccess_proctoring_testcase extends basic_testcase {
      *
      * @throws coding_exception
      */
-    public function test_make_modal_content() {
+    public function test_make_modal_content(){
         $modalhtml = make_modal_content(null, "1", "1");
         $this->assertEquals(gettype ($modalhtml), 'string');
     }
@@ -132,7 +132,7 @@ class quizaccess_proctoring_testcase extends basic_testcase {
      *
      * @throws coding_exception
      */
-    public function test_is_preflight_check_required() {
+    public function test_is_preflight_check_required(){
         $checkflag = is_preflight_check_required(0);
         $this->assertFalse($checkflag);
     }
@@ -142,7 +142,7 @@ class quizaccess_proctoring_testcase extends basic_testcase {
      *
      * @throws coding_exception
      */
-    public function test_get_courseid_cmid_from_preflight_form() {
+    public function test_get_courseid_cmid_from_preflight_form(){
         $response = get_courseid_cmid_from_preflight_form(null);
         $this->assertEquals(gettype ($response), 'array');
     }
@@ -152,7 +152,7 @@ class quizaccess_proctoring_testcase extends basic_testcase {
      *
      * @throws coding_exception
      */
-    public function test_get_download_config_button() {
+    public function test_get_download_config_button(){
         $response = get_download_config_button();
         $this->assertEquals(gettype ($response), 'string');
     }

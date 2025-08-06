@@ -32,17 +32,17 @@ list ($course, $cm) = get_course_and_cm_from_cmid($cmid, 'quiz');
 require_login($course, true, $cm);
 
 $fcmethod = NED::get_config("fcmethod");
-$params = array(
+$params = [
     "courseid" => $courseid,
     "cmid" => $cmid,
     "studentid" => $studentid,
     "reportid" => $reportid
-);
+];
 
 $redirecturl = new moodle_url('/mod/quiz/accessrule/proctoring/report.php', $params);
-if ($fcmethod == "AWS") {
+if ($fcmethod == "AWS"){
     aws_analyze_specific_image($imgid);
-} else if ($fcmethod == "BS") {
+} elseif ($fcmethod == "BS"){
     bs_analyze_specific_image($imgid);
 } else {
     redirect($redirecturl, "Invalid facematch method in settings. Please give 'BS' or 'AWS' as face match method",

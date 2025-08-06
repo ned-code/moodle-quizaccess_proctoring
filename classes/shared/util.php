@@ -29,7 +29,7 @@ trait util {
      *
      * @return false|mixed
      */
-    static public function any(...$args){
+    public static function any(...$args){
         foreach ($args as $arg){
             if ($arg){
                 return $arg;
@@ -46,7 +46,7 @@ trait util {
      *
      * @return bool
      */
-    static public function all(...$args){
+    public static function all(...$args){
         foreach ($args as $arg){
             if (!$arg){
                 return false;
@@ -63,7 +63,7 @@ trait util {
      *
      * @return \stdClass|null
      */
-    static public function choose_obj_with_id(...$args){
+    public static function choose_obj_with_id(...$args){
         foreach ($args as $arg){
             if ($arg && isset($arg->id)){
                 return clone($arg);
@@ -80,7 +80,7 @@ trait util {
      *
      * @return int
      */
-    static public function get_id($obj){
+    public static function get_id($obj){
         if (is_numeric($obj)){
             $id = $obj;
         } else {
@@ -92,13 +92,15 @@ trait util {
 
     /**
      * Multi get_id
+     *
      * @see get_id()
      *
      * @param array|object[]|numeric[] ...$args
      *
      * @return array|int[]
+     * @noinspection PhpParamsInspection
      */
-    static public function get_ids(...$args){
+    public static function get_ids(...$args){
         $res = [];
         foreach ($args as $arg){
             $res[] = static::get_id($arg);
@@ -111,7 +113,7 @@ trait util {
      * @param array  $list
      * @param bool   $import_all
      */
-    static public function import_array_to_object($obj, $list, $import_all=false){
+    public static function import_array_to_object($obj, $list, $import_all=false){
         if (empty($list)) return;
 
         $list = (array)$list;
@@ -141,12 +143,12 @@ trait util {
      *
      * @return string
      */
-    static public function arr2str($list, $add='', $separator=' '){
+    public static function arr2str($list, $add='', $separator=' '){
         if (empty($list) && !is_numeric($list)) return $add;
 
         if (is_array($list)){
             $res = implode($separator, $list);
-        } elseif (is_scalar($list)) {
+        } elseif (is_scalar($list)){
             $res = strval($list);
         } else {
             static::debugging('Wrong $list type for arr2str() function');
@@ -173,8 +175,8 @@ trait util {
      *
      * @return array
      */
-    static public function str2arr($str, $add=[], $separator=' '){
-        if (!is_array($add)) {
+    public static function str2arr($str, $add=[], $separator=' '){
+        if (!is_array($add)){
             $add = [$add];
         }
         if (empty($str) && !is_numeric($str)) return $add;
@@ -202,7 +204,7 @@ trait util {
      *
      * @return mixed|null
      */
-    static public function isset2($obj, $keys=[], $def=null){
+    public static function isset2($obj, $keys=[], $def=null){
         if (empty($obj)){
             return $def;
         } elseif (is_object($obj)){
@@ -234,7 +236,7 @@ trait util {
      *
      * @return int|string|null
      */
-    static public function isset_key($obj, $key, $def=null, $return_null=false){
+    public static function isset_key($obj, $key, $def=null, $return_null=false){
         if (is_object($obj)){
             $obj = (array)$obj;
         } elseif(!is_array($obj)){
@@ -245,8 +247,7 @@ trait util {
         }
         reset($obj);
         $def = (is_null($def) && !$return_null) ? key($obj) : $def;
-        $key = isset($obj[$key]) ? $key : $def;
-        return $key;
+        return isset($obj[$key]) ? $key : $def;
     }
 
     /**
@@ -261,7 +262,7 @@ trait util {
      *
      * @return mixed|null
      */
-    static public function isset_in_list($list, $val, $def=null, $return_null=false){
+    public static function isset_in_list($list, $val, $def=null, $return_null=false){
         if(!is_array($list) || empty($list)){
             return $def;
         }
@@ -286,7 +287,7 @@ trait util {
      *
      * @return bool
      */
-    static public function str_has($haystack, $needle, $offset=0, $case_sensitive=true){
+    public static function str_has($haystack, $needle, $offset=0, $case_sensitive=true){
         if (is_string($needle)){
             if ($case_sensitive){
                 return strpos($haystack, $needle, $offset) !== false;
@@ -311,7 +312,7 @@ trait util {
      *
      * @return bool
      */
-    static public function str_starts_with($haystack, $needle, $case_sensitive=true){
+    public static function str_starts_with($haystack, $needle, $case_sensitive=true){
         if (empty($needle)) return true;
 
         if (is_string($needle)){
@@ -320,7 +321,7 @@ trait util {
 
             $check_str = substr($haystack, 0, $needle_len);
             if ($case_sensitive){
-                return strpos($check_str, $needle) === 0;
+                return str_starts_with($check_str, $needle);
             } else {
                 return stripos($check_str, $needle) === 0;
             }
@@ -342,7 +343,7 @@ trait util {
      *
      * @return bool
      */
-    static public function str_ends_with($haystack, $needle, $case_sensitive=true){
+    public static function str_ends_with($haystack, $needle, $case_sensitive=true){
         if (empty($needle)) return true;
 
         if (is_string($needle)){
@@ -351,7 +352,7 @@ trait util {
 
             $check_str = substr($haystack, -$needle_len);
             if ($case_sensitive){
-                return strpos($check_str, $needle) === 0;
+                return str_starts_with($check_str, $needle);
             } else {
                 return stripos($check_str, $needle) === 0;
             }
@@ -376,7 +377,7 @@ trait util {
      *
      * @return bool
      */
-    static public function str_add_prefix(&$string, $prefix, $case_sensitive=true){
+    public static function str_add_prefix(&$string, $prefix, $case_sensitive=true){
         if (!static::str_starts_with($string, $prefix, $case_sensitive)){
             $string = $prefix.$string;
             return true;
@@ -394,7 +395,7 @@ trait util {
      *
      * @return bool
      */
-    static public function str_rem_prefix(&$string, $prefix, $case_sensitive=true){
+    public static function str_rem_prefix(&$string, $prefix, $case_sensitive=true){
         if (static::str_starts_with($string, $prefix, $case_sensitive)){
             $string = substr($string, strlen($prefix));
             return true;
@@ -410,7 +411,7 @@ trait util {
      *
      * @return array
      */
-    static public function val2arr($value, $empty2empty=true){
+    public static function val2arr($value, $empty2empty=true){
         if ($empty2empty && empty($value)){
             $value = [];
         } elseif (!is_array($value)){
@@ -428,7 +429,7 @@ trait util {
      *
      * @return array
      */
-    static public function val2arr_multi($empty2empty=true, ...$values){
+    public static function val2arr_multi($empty2empty=true, ...$values){
         $res = [];
         foreach ($values as $value){
             $res[] = static::val2arr($value, $empty2empty);
@@ -445,7 +446,7 @@ trait util {
      *
      * @return object|\stdClass|null
      */
-    static public function val2obj($value, $empty2empty=false){
+    public static function val2obj($value, $empty2empty=false){
         if (empty($value)){
             if ($empty2empty){
                 $value = null;
@@ -467,7 +468,7 @@ trait util {
      *
      * @return array
      */
-    static public function val2obj_multi($empty2empty=false, ...$values){
+    public static function val2obj_multi($empty2empty=false, ...$values){
         $res = [];
         foreach ($values as $value){
             $res[] = static::val2obj($value, $empty2empty);
@@ -482,7 +483,7 @@ trait util {
      *
      * @return int[]
      */
-    static public function val2int_multi(...$values){
+    public static function val2int_multi(...$values){
         $res = [];
         foreach ($values as $value){
             $res[] = (int)$value;
@@ -502,7 +503,7 @@ trait util {
      *
      * @return array|mixed
      */
-    static public function pack_in_array($list, $keys, $list_with_arrays=false, $def_val=0, $def_key_values=[]){
+    public static function pack_in_array($list, $keys, $list_with_arrays=false, $def_val=0, $def_key_values=[]){
         if (empty($list) || empty($keys)){
             return [];
         }
@@ -533,7 +534,7 @@ trait util {
      *
      * @return \DateTime
      */
-    static public function get_datetime_by_timestamp($timestamp=null, $timezone=null){
+    public static function get_datetime_by_timestamp($timestamp=null, $timezone=null){
         $dt = new \DateTime();
         if (!is_null($timestamp)){
             $dt->setTimestamp((int)$timestamp);
@@ -556,7 +557,7 @@ trait util {
      *
      * @return bool
      */
-    static public function check_time_value($check_hour=null, $check_minute=null, $timestamp=null, $timezone=null){
+    public static function check_time_value($check_hour=null, $check_minute=null, $timestamp=null, $timezone=null){
         if (is_null($check_hour) && is_null($check_minute)){
             debugging('You should set for checking hour or minute!');
             return false;
@@ -597,7 +598,7 @@ trait util {
      *
      * @return array($start, $end)
      */
-    static public function get_day_start_end($timestamp, $timezone=null){
+    public static function get_day_start_end($timestamp, $timezone=null){
         $dt = static::get_datetime_by_timestamp($timestamp ?? 0, $timezone);
         $dt->setTime(0, 0, 0, 0);
         $start = $dt->getTimestamp();
@@ -613,7 +614,7 @@ trait util {
      *
      * @return string
      */
-    static public function time_diff_to_h_m($timestamp1, $timestamp2=null){
+    public static function time_diff_to_h_m($timestamp1, $timestamp2=null){
         $timestamp2 = $timestamp2 ?? time();
 
         $diff = abs($timestamp2 - $timestamp1);
@@ -637,7 +638,7 @@ trait util {
      *
      * @return string
      */
-    static public function time_diff_to_str_max($timestamp1, $timestamp2=null, $count=1, $fullname=false, $separator=' ', $ifnull='0'){
+    public static function time_diff_to_str_max($timestamp1, $timestamp2=null, $count=1, $fullname=false, $separator=' ', $ifnull='0'){
         $res = [];
         $timestamp2 = $timestamp2 ?? time();
         $diff = abs($timestamp2 - $timestamp1);
@@ -686,7 +687,7 @@ trait util {
      *
      * @return array - new $list
      */
-    static public function add2list($list, $val, $at_start=true, $add_if_empty=true, $key_try=null){
+    public static function add2list($list, $val, $at_start=true, $add_if_empty=true, $key_try=null){
         if (empty($list)){
             if (!$add_if_empty){
                 return [];
@@ -716,7 +717,7 @@ trait util {
      *
      * @return array|\cm_info[]|object[]
      */
-    static public function filter_cms_by_modnames($cms, $modnames=[]){
+    public static function filter_cms_by_modnames($cms, $modnames=[]){
         if (empty($cms) || empty($modnames)){
             return $cms;
         }
@@ -740,7 +741,7 @@ trait util {
      *
      * @return array - array [cmid => activity_name]
      */
-    static public function cms2menu($cms, $filter_modnames=[]){
+    public static function cms2menu($cms, $filter_modnames=[]){
         $menu = [];
         if (empty($cms)){
             return $menu;
@@ -751,7 +752,7 @@ trait util {
             if (!empty($filter_modnames) && !in_array($cm->modname, $filter_modnames)) continue;
 
             $activity_name = strip_tags($cm->get_formatted_name());
-            if (!$cm->visible) {
+            if (!$cm->visible){
                 $activity_name .= " (hidden)";
             }
             $menu[$cm->id] = $activity_name;
@@ -767,7 +768,7 @@ trait util {
      *
      * @return array - array [cmid => modname]
      */
-    static public function users2menu($users){
+    public static function users2menu($users){
         $menu = [];
         if (empty($users)){
             return $menu;
@@ -789,7 +790,7 @@ trait util {
      *
      * @return array
      */
-    static public function array_remove_by_values($array, $values, $recalculate=false){
+    public static function array_remove_by_values($array, $values, $recalculate=false){
         $values = static::val2arr($values);
         $res = array_diff($array, $values);
         if ($recalculate){
@@ -809,7 +810,7 @@ trait util {
      *
      * @return array
      */
-    static public function array_remove_by_keys($array, $keys, $recalculate=false){
+    public static function array_remove_by_keys($array, $keys, $recalculate=false){
         $keys = static::val2arr($keys);
         $rem = array_fill_keys($keys, true);
         $res = array_diff_key($array, $rem);
@@ -827,7 +828,7 @@ trait util {
      *
      * @return mixed|null
      */
-    static public function max(...$args){
+    public static function max(...$args){
         if (empty($args)){
             return null;
         }
@@ -850,7 +851,7 @@ trait util {
      *
      * @return mixed|null
      */
-    static public function min(...$args){
+    public static function min(...$args){
         if (empty($args)){
             return null;
         }
@@ -876,7 +877,7 @@ trait util {
      *
      * @return float - the memory amount in megabytes.
      */
-    static public function memory_get_usage($real_usage=false, $precision=2){
+    public static function memory_get_usage($real_usage=false, $precision=2){
         return round(memory_get_usage($real_usage)/1000000, $precision);
     }
 
@@ -890,7 +891,7 @@ trait util {
      *
      * @return float - the memory amount in megabytes.
      */
-    static public function memory_get_peak_usage($real_usage=false, $precision=2){
+    public static function memory_get_peak_usage($real_usage=false, $precision=2){
         return round(memory_get_peak_usage($real_usage)/1000000, $precision);
     }
 
@@ -899,7 +900,7 @@ trait util {
      *
      * @return array
      */
-    static public function get_yesno_list() {
+    public static function get_yesno_list(){
         return [get_string('no'), get_string('yes')];
     }
 
@@ -910,7 +911,7 @@ trait util {
      *
      * @return string
      */
-    static public function get_yesno($value) {
+    public static function get_yesno($value){
         return $value ? get_string('yes') : get_string('no');
     }
 
@@ -928,7 +929,7 @@ trait util {
      * @return array|string - if not $join, return array with the quoted (escaped) strings,
      *                      otherwise return the quoted (escaped) string as regexp string group join by '|'
      */
-    static public function preg_quote_list($list, $join=false, $delimiter=null){
+    public static function preg_quote_list($list, $join=false, $delimiter=null){
         if (empty($list)){
             return $join ? '' : [];
         }
@@ -953,7 +954,7 @@ trait util {
      *
      * @return string
      */
-    static public function make_key(...$args){
+    public static function make_key(...$args){
         $keys = [];
         foreach ($args as $arg){
             if (is_string($arg) || is_numeric($arg)){
@@ -973,7 +974,7 @@ trait util {
      *
      * @return string
      */
-    static public function val2key($val){
+    public static function val2key($val){
         if (is_array($val)){
             return static::make_key(...$val);
         } if (is_string($val) || is_numeric($val)){
@@ -990,7 +991,7 @@ trait util {
      *
      * @return float|int|null
      */
-    static public function array_avg($list){
+    public static function array_avg($list){
         if (empty($list)) return null;
 
         return array_sum($list) / count($list);
@@ -1007,7 +1008,7 @@ trait util {
         if (is_null($_data)){
             global $_SERVER;
             $https = $_SERVER['HTTPS'] ?? $_SERVER['REQUEST_SCHEME'] ?? $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? null;
-            $_data = (bool)($https && (strcasecmp('on', $https) == 0 || strcasecmp('https', $https) == 0));
+            $_data = $https && (strcasecmp('on', $https) == 0 || strcasecmp('https', $https) == 0);
         }
 
         return $_data;

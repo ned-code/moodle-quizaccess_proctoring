@@ -112,7 +112,7 @@ class provider implements
      *
      * @param userlist $userlist The userlist containing the list of users who have data in this context/plugin combination.
      */
-    public static function get_users_in_context(userlist $userlist) {
+    public static function get_users_in_context(userlist $userlist){
         $context = $userlist->get_context();
 
         // The data is associated at the quiz module context level, so retrieve the user's context id.
@@ -137,13 +137,13 @@ class provider implements
      * @throws coding_exception
      * @throws dml_exception
      */
-    public static function export_user_data(approved_contextlist $contextlist) {
+    public static function export_user_data(approved_contextlist $contextlist){
         global $DB;
 
         // Get all cmids that correspond to the contexts for a user.
-        foreach ($contextlist->get_contexts() as $context) {
-            if ($context->contextlevel === CONTEXT_MODULE) {
-                if ($context->instanceid) {
+        foreach ($contextlist->get_contexts() as $context){
+            if ($context->contextlevel === CONTEXT_MODULE){
+                if ($context->instanceid){
                     list($insql, $params) = $DB->get_in_or_equal($context->instanceid, SQL_PARAMS_NAMED);
                     $params['userid'] = $contextlist->get_user()->id;
 
@@ -161,7 +161,7 @@ class provider implements
 
                     $qaplogs = $DB->get_records_sql($sql, $params);
                     $index = 0;
-                    foreach ($qaplogs as $qaplog) {
+                    foreach ($qaplogs as $qaplog){
                         // Data export is organised in: {Context}/{Plugin Name}/{Table name}/{index}/data.json.
                         $index++;
                         $subcontext = [
@@ -184,7 +184,7 @@ class provider implements
 
                         $paramfile["userid"] = $qaplog->userid;
                         $paramfile["filename"] = $webcamepiclast;
-                        if (!empty($webcamepiclast)) {
+                        if (!empty($webcamepiclast)){
                             $userfiles = $DB->get_record('files', $paramfile);
                             writer::with_context($context)
                                 ->export_area_files([NED::str('privacy:core_files')],
@@ -208,11 +208,11 @@ class provider implements
      * @param context $context
      * @throws dml_exception
      */
-    public static function delete_data_for_all_users_in_context(context $context) {
+    public static function delete_data_for_all_users_in_context(context $context){
         global $DB;
 
         // Sanity check that context is at the module context level, then get the cmid.
-        if ($context->contextlevel === CONTEXT_MODULE) {
+        if ($context->contextlevel === CONTEXT_MODULE){
             $cmid = $context->instanceid;
             $DB->set_field(NED::TABLE_LOG, 'userid', 0, ['cmid' => $cmid]);
         }
@@ -229,12 +229,12 @@ class provider implements
      * @throws coding_exception
      * @throws dml_exception
      */
-    public static function delete_data_for_users(approved_userlist $userlist) {
+    public static function delete_data_for_users(approved_userlist $userlist){
         global $DB;
         $context = $userlist->get_context();
 
         // Sanity check that context is at the Module context level.
-        if ($context->contextlevel !== CONTEXT_MODULE) {
+        if ($context->contextlevel !== CONTEXT_MODULE){
             $userids = $userlist->get_userids();
             list($insql, $inparams) = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED);
 
@@ -257,19 +257,19 @@ class provider implements
      * @param approved_contextlist $contextlist
      * @throws dml_exception
      */
-    public static function delete_data_for_user(approved_contextlist $contextlist) {
+    public static function delete_data_for_user(approved_contextlist $contextlist){
         global $DB;
 
         // If the user has data, then only the User context should be present so get the first context.
         $contexts = $contextlist->get_contexts();
-        if (count($contexts) == 0) {
+        if (count($contexts) == 0){
             return;
         }
 
         $params = ['userid' => $contextlist->get_user()->id];
         $DB->set_field(NED::TABLE_LOG, 'userid', 0, $params);
 
-        foreach ($contextlist as $context) {
+        foreach ($contextlist as $context){
             // Delete user file (webcam images).
             $userfiles = $DB->get_records('files', $params);
             $fs = get_file_storage();

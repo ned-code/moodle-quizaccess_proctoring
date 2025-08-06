@@ -47,7 +47,7 @@ class helper {
      * @param array $options Display options.
      * @return string
      */
-    public static function format_icon_link($url, $icon, $alt, $iconcomponent = 'moodle', $options = array()) {
+    public static function format_icon_link($url, $icon, $alt, $iconcomponent = 'moodle', $options = []){
         global $OUTPUT;
 
         return $OUTPUT->action_icon(
@@ -64,7 +64,9 @@ class helper {
      * Validate proctoring config string.
      *
      * @param string $proctoringconfig
+     *
      * @return bool
+     * @noinspection PhpRedundantCatchClauseInspection
      */
     public static function is_valid_proctoring_config(string $proctoringconfig) : bool {
         $result = true;
@@ -76,9 +78,7 @@ class helper {
         $plist = new CFPropertyList();
         try {
             $plist->parse($proctoringconfig);
-        } catch (\ErrorException $e) {
-            $result = false;
-        } catch (\Exception $e) {
+        } catch (\ErrorException|\Exception $e){
             $result = false;
         }
 
@@ -94,7 +94,7 @@ class helper {
      * @return array
      */
     public static function get_proctoring_file_headers(int $expiretime = null) : array {
-        if (is_null($expiretime)) {
+        if (is_null($expiretime)){
             $expiretime = time();
         }
         $headers = [];
@@ -125,8 +125,8 @@ class helper {
 
         //TODO check this config, as it doesn't work
         // Retrieve the config for quiz.
-        $config = quiz_settings::get_config_by_quiz_id($cm->instance);
-        if (empty($config)) {
+        $config = \quizaccess_seb\seb_quiz_settings::get_config_by_quiz_id($cm->instance);
+        if (empty($config)){
             throw new \moodle_exception('noconfigfound', 'quizaccess_proctoring', '', $cm->id);
         }
         return $config;
@@ -137,9 +137,9 @@ class helper {
      *
      * @param string $contents Contents of file.
      */
-    public static function send_proctoring_config_file(string $contents) {
+    public static function send_proctoring_config_file(string $contents){
         // We can now send the file back to the browser.
-        foreach (self::get_proctoring_file_headers() as $header) {
+        foreach (self::get_proctoring_file_headers() as $header){
             header($header);
         }
 

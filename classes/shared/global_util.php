@@ -34,11 +34,11 @@ trait global_util {
      *
      * @return array
      */
-    static protected function _g_get_g_keys($function, $add_keys=[]){
+    protected static function _g_get_g_keys($function, $add_keys=[]){
         $keys = [$function];
         if (!empty($add_keys)){
             if(!is_array($add_keys)){
-                $add_keys = [$add_keys ?? 0];
+                $add_keys = [$add_keys];
             }
 
             $keys = array_merge($keys, $add_keys);
@@ -58,7 +58,7 @@ trait global_util {
      *
      * @return array|mixed|null
      */
-    static protected function g($function, $add_keys=[], $def_value=null, $set_value=false, $clone=false){
+    protected static function g($function, $add_keys=[], $def_value=null, $set_value=false, $clone=false){
         $obj = &static::$_global_data;
         $keys = static::_g_get_g_keys($function, $add_keys);
         foreach ($keys as $key){
@@ -91,7 +91,7 @@ trait global_util {
      *
      * @return array|mixed|null
      */
-    static protected function g_get($function, $add_keys=[], $def_value=null){
+    protected static function g_get($function, $add_keys=[], $def_value=null){
         return static::g($function, $add_keys, $def_value, false);
     }
 
@@ -106,7 +106,7 @@ trait global_util {
      *
      * @return array|mixed|null
      */
-    static protected function g_set($function, $add_keys=[], $value=null, $save_null=false){
+    protected static function g_set($function, $add_keys=[], $value=null, $save_null=false){
         if (is_null($value) && !$save_null){
             $value = false;
         }
@@ -123,7 +123,7 @@ trait global_util {
      *
      * @return array|mixed|null
      */
-    static protected function g_get_clone($function, $add_keys=[], $def_value=null){
+    protected static function g_get_clone($function, $add_keys=[], $def_value=null){
         return static::g($function, $add_keys, $def_value, false, true);
     }
 
@@ -135,7 +135,7 @@ trait global_util {
      *
      * @return bool - true, if there is such object, false otherwise
      */
-    static protected function g_isset($function, $add_keys=[]){
+    protected static function g_isset($function, $add_keys=[]){
         $obj = &static::$_global_data;
         $keys = static::_g_get_g_keys($function, $add_keys);
         foreach ($keys as $key){
@@ -157,7 +157,7 @@ trait global_util {
      *
      * @return bool - true, if there was such object, false otherwise
      */
-    static protected function g_remove($function, $add_keys=[]){
+    protected static function g_remove($function, $add_keys=[]){
         $obj = &static::$_global_data;
         $keys = static::_g_get_g_keys($function, $add_keys);
         $count = count($keys);
@@ -189,7 +189,7 @@ trait global_util {
      *
      * @return void
      */
-    static protected function g_remove_functions_data($functions){
+    protected static function g_remove_functions_data($functions){
         $functions = is_array($functions) ? $functions : [$functions];
         foreach ($functions as $function){
             unset(static::$_global_data[$function]);
@@ -203,7 +203,7 @@ trait global_util {
      *
      * @return void
      */
-    static public function g_remove_all_ned_data(){
+    public static function g_remove_all_ned_data(){
         static::$_global_data = [];
     }
 }

@@ -22,9 +22,9 @@ trait db_util {
     use util;
 
     /**
-     * @return \moodle_database|\mysqli_native_moodle_database|\readonlydriver
+     * @return \moodle_database|\mysqli_native_moodle_database
      */
-    static public function db(){
+    public static function db(){
         global $DB;
         return $DB;
     }
@@ -36,7 +36,7 @@ trait db_util {
      *
      * @return array
      */
-    static public function sql_filter_params($params){
+    public static function sql_filter_params($params){
         foreach ($params as $key => $value){
             if (empty($value)){
                 unset($params[$key]);
@@ -59,8 +59,8 @@ trait db_util {
      *
      * @return string - $sql query
      */
-    static public function sql_generate($select=[], $joins=[], $table_name='', $table_alias='', $where=[], $groupby=[], $orderby=[], $limit=[]){
-        list($select, $joins, $where, $groupby, $orderby, $limit) =
+    public static function sql_generate($select=[], $joins=[], $table_name='', $table_alias='', $where=[], $groupby=[], $orderby=[], $limit=[]){
+        [$select, $joins, $where, $groupby, $orderby, $limit] =
             self::val2arr_multi(true, $select, $joins, $where, $groupby, $orderby, $limit);
 
         $select = "SELECT ". (empty($select) ? "$table_alias.*" : join(', ', $select));
@@ -83,11 +83,10 @@ trait db_util {
      *
      * @return string
      */
-    static public function sql_where($where=[], $condition="AND", $without_word_where=false){
+    public static function sql_where($where=[], $condition="AND", $without_word_where=false){
         $where = static::val2arr($where);
         $start = $without_word_where ? "\n((" : "\nWHERE ((";
-        $where = !empty($where) ? ($start . join(") $condition (", $where) . '))') : '';
-        return $where;
+        return !empty($where) ? ($start . join(") $condition (", $where) . '))') : '';
     }
 
     /**
@@ -99,8 +98,8 @@ trait db_util {
      * @param array  $params    - params array, if you already has it
      * @param string $prefix    - prefix for SQL parameters
      */
-    static public function sql_add_get_in_or_equal_options($cond_name, $items, &$where=[], &$params=[], $prefix='param'){
-        list($col_sql, $col_params) = static::db()->get_in_or_equal($items, SQL_PARAMS_NAMED, $prefix.'_');
+    public static function sql_add_get_in_or_equal_options($cond_name, $items, &$where=[], &$params=[], $prefix='param'){
+        [$col_sql, $col_params] = static::db()->get_in_or_equal($items, SQL_PARAMS_NAMED, $prefix.'_');
         $where[] = "$cond_name $col_sql";
         $params = array_merge($params, $col_params);
     }
@@ -118,7 +117,7 @@ trait db_util {
      *
      * @return array($where, $params)
      */
-    static public function sql_get_in_or_equal_options($options, $prefix='param', $columns=null,
+    public static function sql_get_in_or_equal_options($options, $prefix='param', $columns=null,
         $return_where_as_array=false, $condition="AND", $without_word_where=true){
         if (empty($options)){
             return [$return_where_as_array ? [] : '', []];
@@ -139,7 +138,7 @@ trait db_util {
             }
 
             $prefix_column = str_replace('.', '_', $column);
-            list($col_sql, $col_params) = static::db()->get_in_or_equal($items, SQL_PARAMS_NAMED, $prefix.'_'.$prefix_column.'_');
+            [$col_sql, $col_params] = static::db()->get_in_or_equal($items, SQL_PARAMS_NAMED, $prefix.'_'.$prefix_column.'_');
             $where[] = "$column $col_sql";
             $all_params[] = $col_params;
         }
@@ -169,8 +168,8 @@ trait db_util {
      *
      * @return array($where, $params)
      */
-    static public function sql_get_in_or_equal_options_list($options, &$where=[], &$params=[], $columns=null, $prefix='param'){
-        list($new_where, $new_params) = static::sql_get_in_or_equal_options($options, $prefix, $columns, true);
+    public static function sql_get_in_or_equal_options_list($options, &$where=[], &$params=[], $columns=null, $prefix='param'){
+        [$new_where, $new_params] = static::sql_get_in_or_equal_options($options, $prefix, $columns, true);
         $where = array_merge($where, $new_where);
         $params = array_merge($params, $new_params);
         return [$where, $params];

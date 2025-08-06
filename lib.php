@@ -40,12 +40,12 @@ use Aws\Rekognition\RekognitionClient;
  * @param array $options additional options affecting the file serving.
  * @return bool false if the file not found, just send the file otherwise and do not return anything.
  */
-function quizaccess_proctoring_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options=array()) {
+function quizaccess_proctoring_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options= []){
 
     $itemid = array_shift($args);
     $filename = array_pop($args);
 
-    if (!$args) {
+    if (!$args){
         $filepath = '/';
     } else {
         $filepath = '/' .implode('/', $args) . '/';
@@ -54,10 +54,11 @@ function quizaccess_proctoring_pluginfile($course, $cm, $context, $filearea, $ar
     $fs = get_file_storage();
 
     $file = $fs->get_file($context->id, 'quizaccess_proctoring', $filearea, $itemid, $filepath, $filename);
-    if (!$file) {
+    if (!$file){
         return false;
     }
     send_stored_file($file, 0, 0, $forcedownload, $options);
+    return true;
 }
 
 /**
@@ -65,9 +66,10 @@ function quizaccess_proctoring_pluginfile($course, $cm, $context, $filearea, $ar
  *
  * @param int $rowid the reportid.
  * @param String $matchresult similarity.
- * @return array Similaritycheck.
+ *
+ * @return void
  */
-function update_match_result($rowid, $matchresult) {
+function update_match_result($rowid, $matchresult){
     global $DB;
     $log = $DB->get_record(NED::TABLE_LOG, ['id' => $rowid]);
     if ($log){
@@ -85,7 +87,7 @@ function update_match_result($rowid, $matchresult) {
  * @param String $targetimageurl the course module id.
  * @return array Similaritycheck.
  */
-function check_similarity_aws($referenceimageurl, $targetimageurl) {
+function check_similarity_aws($referenceimageurl, $targetimageurl){
     global $DB;
     $awskey = NED::get_config('awskey');
     $awssecret = NED::get_config('awssecret');
@@ -108,18 +110,16 @@ function check_similarity_aws($referenceimageurl, $targetimageurl) {
                 'Bytes' => file_get_contents($targetimageurl)
             ],
         ]);
-        $facematchresult = $comparefaceresult['FaceMatches'];
-        return $facematchresult;
-    } catch (Exception $e) {
-         $similarity = array();
-         return $similarity;
+        return $comparefaceresult['FaceMatches'];
+    } catch (Exception $e){
+        return [];
     }
 }
 
 /**
  * Execute facerecognition task.
  */
-function execute_fm_task() {
+function execute_fm_task(){
     global $DB;
     // Get 5 task.
     $data = $DB->get_recordset(NED::TABLE_FACEMATCH, [], '', '*', 0, 5);
@@ -138,8 +138,8 @@ function execute_fm_task() {
             log_aws_api_call($reportid, $apiresponse);
 
             // Update Match result.
-            if (count($similarityresult) > 0) {
-                if (isset($similarityresult[0]['Similarity'])) {
+            if (count($similarityresult) > 0){
+                if (isset($similarityresult[0]['Similarity'])){
                     $similarity = $similarityresult[0]['Similarity'];
                 } else {
                     $similarity = 0;
@@ -156,8 +156,8 @@ function execute_fm_task() {
             $similarityresult = check_similarity_bs($refimageurl, $targetimageurl);
             $jsonarray = json_decode($similarityresult, true);
             // Update Match result.
-            if (isset($jsonarray['process']) && isset($jsonarray['facematched'])) {
-                if ($jsonarray['facematched'] == "True") {
+            if (isset($jsonarray['process']) && isset($jsonarray['facematched'])){
+                if ($jsonarray['facematched'] == "True"){
                     $similarity = 100;
                 } else {
                     $similarity = 0;
@@ -181,10 +181,10 @@ function execute_fm_task() {
  *
  * @return bool false if no record found.
  */
-function log_facematch_task() {
+function log_facematch_task(){
     global $DB;
     $data = $DB->get_recordset(NED::TABLE_LOG, ['awsflag' => 0], '', "DISTINCT courseid, cmid, userid");
-    foreach ($data as $row) {
+    foreach ($data as $row){
         $courseid = $row->courseid;
         $cmid = $row->cmid;
         $userid = $row->userid;
@@ -192,6 +192,7 @@ function log_facematch_task() {
     }
 
     echo "Log success";
+    return (bool)$data;
 }
 
 /**
@@ -202,12 +203,12 @@ function log_facematch_task() {
  * @param int $studentid the context.
  * @return bool false if no record found.
  */
-function log_specific_quiz($courseid, $cmid, $studentid) {
+function log_specific_quiz($courseid, $cmid, $studentid){
     global $DB;
     // Get user profile image.
     $user = core_user::get_user($studentid);
     $profileimageurl = "";
-    if ($user->picture) {
+    if ($user->picture){
         $profileimageurl = new moodle_url('/user/pix.php/'.$user->id.'/f1.jpg');
     }
     // Update all as attempted.
@@ -216,16 +217,16 @@ function log_specific_quiz($courseid, $cmid, $studentid) {
     // Check random.
     $limit = 5;
     $awschecknumber = NED::get_config('awschecknumber');
-    if ($awschecknumber != "") {
+    if ($awschecknumber != ""){
         $limit = (int) $awschecknumber;
     }
 
-    if ($limit == -1) {
+    if ($limit == -1){
         $sql = " SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status, "
         ." e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email "
         ." FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid "
         ." WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != '' ";
-    } else if ($limit > 0) {
+    } elseif ($limit > 0){
         $sql = " SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status, "
         ." e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email "
         ." FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid "
@@ -241,11 +242,11 @@ function log_specific_quiz($courseid, $cmid, $studentid) {
 
     $sqlexecuted = $DB->get_recordset_sql($sql);
 
-    foreach ($sqlexecuted as $row) {
+    foreach ($sqlexecuted as $row){
         $reportid = $row->reportid;
         $snapshot = $row->webcampicture;
         echo $snapshot;
-        if ($snapshot != "") {
+        if ($snapshot != ""){
             $inserttaskrow = new stdClass();
             $inserttaskrow->refimageurl = $profileimageurl->__toString();
             $inserttaskrow->targetimageurl = $snapshot;
@@ -265,12 +266,12 @@ function log_specific_quiz($courseid, $cmid, $studentid) {
  * @param int $studentid the context.
  * @return bool false if no record found.
  */
-function aws_analyze_specific_quiz($courseid, $cmid, $studentid) {
+function aws_analyze_specific_quiz($courseid, $cmid, $studentid){
     global $DB;
     // Get user profile image.
     $user = core_user::get_user($studentid);
     $profileimageurl = "";
-    if ($user->picture) {
+    if ($user->picture){
         $profileimageurl = new moodle_url('/user/pix.php/'.$user->id.'/f1.jpg');
     }
     // Update all as attempted.
@@ -279,16 +280,16 @@ function aws_analyze_specific_quiz($courseid, $cmid, $studentid) {
     // Check random.
     $limit = 5;
     $awschecknumber = NED::get_config('awschecknumber');
-    if ($awschecknumber != "") {
+    if ($awschecknumber != ""){
         $limit = (int)$awschecknumber;
     }
 
-    if ($limit == -1) {
+    if ($limit == -1){
         $sql = " SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status, "
         ." e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email "
         ." FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid "
         ." WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != '' ";
-    } else if ($limit > 0) {
+    } elseif ($limit > 0){
         $sql = " SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status, "
         ." e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email "
         ." FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid "
@@ -304,7 +305,7 @@ function aws_analyze_specific_quiz($courseid, $cmid, $studentid) {
 
     $sqlexecuted = $DB->get_recordset_sql($sql);
 
-    foreach ($sqlexecuted as $row) {
+    foreach ($sqlexecuted as $row){
         $reportid = $row->reportid;
         $refimageurl = $profileimageurl->__toString();
         $targetimageurl = $row->webcampicture;
@@ -314,8 +315,8 @@ function aws_analyze_specific_quiz($courseid, $cmid, $studentid) {
         log_aws_api_call($reportid, $apiresponse);
 
         // Update Match result.
-        if (count($similarityresult) > 0) {
-            if (isset($similarityresult[0]['Similarity'])) {
+        if (count($similarityresult) > 0){
+            if (isset($similarityresult[0]['Similarity'])){
                 $similarity = $similarityresult[0]['Similarity'];
             } else {
                 $similarity = 0;
@@ -339,12 +340,12 @@ function aws_analyze_specific_quiz($courseid, $cmid, $studentid) {
  * @param int $studentid the context.
  * @return bool false if no record found.
  */
-function bs_analyze_specific_quiz($courseid, $cmid, $studentid) {
+function bs_analyze_specific_quiz($courseid, $cmid, $studentid){
     global $DB;
     // Get user profile image.
     $user = core_user::get_user($studentid);
     $profileimageurl = "";
-    if ($user->picture) {
+    if ($user->picture){
         $profileimageurl = new moodle_url('/user/pix.php/'.$user->id.'/f1.jpg');
     }
     // Update all as attempted.
@@ -353,16 +354,16 @@ function bs_analyze_specific_quiz($courseid, $cmid, $studentid) {
     // Check random.
     $limit = 5;
     $awschecknumber = NED::get_config('awschecknumber');
-    if ($awschecknumber != "") {
+    if ($awschecknumber != ""){
         $limit = (int)$awschecknumber;
     }
 
-    if ($limit == -1) {
+    if ($limit == -1){
         $sql = "SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status,
         e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email
         FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid
         WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.webcampicture != ''";
-    } else if ($limit > 0) {
+    } elseif ($limit > 0){
         $sql = "SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status,
         e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email
         FROM {".NED::TABLE_LOG."} e INNER JOIN {user} u  ON u.id = e.userid
@@ -378,7 +379,7 @@ function bs_analyze_specific_quiz($courseid, $cmid, $studentid) {
 
     $sqlexecuted = $DB->get_recordset_sql($sql);
 
-    foreach ($sqlexecuted as $row) {
+    foreach ($sqlexecuted as $row){
         $reportid = $row->reportid;
         $refimageurl = $profileimageurl->__toString();
         $targetimageurl = $row->webcampicture;
@@ -386,8 +387,8 @@ function bs_analyze_specific_quiz($courseid, $cmid, $studentid) {
         $jsonarray = json_decode($similarityresult, true);
 
         // Update Match result.
-        if (isset($jsonarray['process']) && isset($jsonarray['facematched'])) {
-            if ($jsonarray['facematched'] == "True") {
+        if (isset($jsonarray['process']) && isset($jsonarray['facematched'])){
+            if ($jsonarray['facematched'] == "True"){
                 $similarity = 100;
             } else {
                 $similarity = 0;
@@ -409,11 +410,11 @@ function bs_analyze_specific_quiz($courseid, $cmid, $studentid) {
  * @param int $reportid the context.
  * @return bool false if no record found.
  */
-function aws_analyze_specific_image($reportid) {
+function aws_analyze_specific_image($reportid){
     global $DB;
     $reportdata = $DB->get_record(NED::TABLE_LOG, ['id' => $reportid], "id, courseid, cmid, userid, webcampicture");
 
-    if ($reportdata) {
+    if ($reportdata){
         $studentid = $reportdata->userid;
         $courseid = $reportdata->courseid;
         $cmid = $reportdata->cmid;
@@ -422,7 +423,7 @@ function aws_analyze_specific_image($reportid) {
         // Get user profile image.
         $user = core_user::get_user($studentid);
         $profileimageurl = "";
-        if ($user->picture) {
+        if ($user->picture){
             $profileimageurl = new moodle_url('/user/pix.php/'.$user->id.'/f1.jpg');
         }
         // Update all as attempted.
@@ -434,8 +435,8 @@ function aws_analyze_specific_image($reportid) {
         log_aws_api_call($reportid, $apiresponse);
 
         // Update Match result.
-        if (count($similarityresult) > 0) {
-            if (isset($similarityresult[0]['Similarity'])) {
+        if (count($similarityresult) > 0){
+            if (isset($similarityresult[0]['Similarity'])){
                 $similarity = $similarityresult[0]['Similarity'];
             } else {
                 $similarity = 0;
@@ -456,11 +457,11 @@ function aws_analyze_specific_image($reportid) {
  * @param int $reportid the context.
  * @return bool false if no record found.
  */
-function bs_analyze_specific_image($reportid) {
+function bs_analyze_specific_image($reportid){
     global $DB;
     $reportdata = $DB->get_record(NED::TABLE_LOG, ['id' => $reportid], "id, courseid, cmid, userid, webcampicture");
 
-    if ($reportdata) {
+    if ($reportdata){
         $studentid = $reportdata->userid;
         $courseid = $reportdata->courseid;
         $cmid = $reportdata->cmid;
@@ -469,7 +470,7 @@ function bs_analyze_specific_image($reportid) {
         // Get user profile image.
         $user = core_user::get_user($studentid);
         $profileimageurl = "";
-        if ($user->picture) {
+        if ($user->picture){
             $profileimageurl = new moodle_url('/user/pix.php/'.$user->id.'/f1.jpg');
         }
         // Update all as attempted.
@@ -479,8 +480,8 @@ function bs_analyze_specific_image($reportid) {
         $jsonarray = json_decode($similarityresult, true);
 
         // Update Match result.
-        if (isset($jsonarray['process']) && isset($jsonarray['facematched'])) {
-            if ($jsonarray['facematched'] == "True") {
+        if (isset($jsonarray['process']) && isset($jsonarray['facematched'])){
+            if ($jsonarray['facematched'] == "True"){
                 $similarity = 100;
             } else {
                 $similarity = 0;
@@ -503,7 +504,7 @@ function bs_analyze_specific_image($reportid) {
  * @param string $apiresponse the context.
  * @return bool false if no record found.
  */
-function log_aws_api_call($reportid, $apiresponse) {
+function log_aws_api_call($reportid, $apiresponse){
     global $DB;
     $log = new stdClass();
     $log->reportid = $reportid;
@@ -517,10 +518,11 @@ function log_aws_api_call($reportid, $apiresponse) {
  * Returns face match similarity.
  *
  * @param String $referenceimageurl the courseid.
- * @param String $targetimageurl the course module id.
- * @return array Similaritycheck.
+ * @param String $targetimageurl the course module id
+ *
+ * @return string Similaritycheck.
  */
-function check_similarity_bs($referenceimageurl, $targetimageurl) {
+function check_similarity_bs($referenceimageurl, $targetimageurl){
     global $CFG;
     $bsapi = NED::get_config('bsapi');
     $bstoken = NED::get_config('bstoken');
@@ -533,7 +535,7 @@ function check_similarity_bs($referenceimageurl, $targetimageurl) {
 
     // Check similarity.
     $curl = curl_init();
-    curl_setopt_array($curl, array(
+    curl_setopt_array($curl, [
         CURLOPT_URL => $bsapi,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_ENCODING => '',
@@ -542,10 +544,13 @@ function check_similarity_bs($referenceimageurl, $targetimageurl) {
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
         CURLOPT_CUSTOMREQUEST => 'POST',
-        CURLOPT_POSTFIELDS => array('image1' => new CURLFILE($CFG->dataroot ."/temp/".$image1),
-        'image2' => new CURLFILE($CFG->dataroot ."/temp/".$image2),
-        'token' => $bstoken)
-    ));
+        CURLOPT_POSTFIELDS => [
+            'image1' => new CURLFILE($CFG->dataroot ."/temp/".$image1),
+            'image2' => new CURLFILE($CFG->dataroot ."/temp/".$image2),
+            'token'  => $bstoken
+        ]
+    ]);
+    /** @var string $response - not bool via CURLOPT_RETURNTRANSFER => true */
     $response = curl_exec($curl);
     curl_close($curl);
 
@@ -561,11 +566,11 @@ function check_similarity_bs($referenceimageurl, $targetimageurl) {
  * @param String $reportid the reportid.
  * @return void.
  */
-function log_fm_warning($reportid) {
+function log_fm_warning($reportid){
     global $DB;
     $reportdata = $DB->get_record(NED::TABLE_LOG, ['id' => $reportid]);
 
-    if ($reportdata) {
+    if ($reportdata){
         $userid = $reportdata->userid;
         $courseid = $reportdata->courseid;
         $cmid = $reportdata->cmid;
@@ -575,7 +580,7 @@ function log_fm_warning($reportid) {
         $warnings = $DB->get_record(NED::TABLE_WARNINGS, $params);
 
         // If does not exists.
-        if (!$warnings) {
+        if (!$warnings){
             $params['reportid'] = $reportid;
             $DB->insert_record(NED::TABLE_WARNINGS, (object)$params);
         }

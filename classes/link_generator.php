@@ -50,7 +50,7 @@ class link_generator {
         get_coursemodule_from_id('quiz', $cmid, 0, false, MUST_EXIST);
 
         $url = new moodle_url('/mod/quiz/accessrule/proctoring/report.php', ['courseid' => $courseid, 'cmid'=> $cmid]);
-        if ($proctoring) {
+        if ($proctoring){
             $secure ? $url->set_scheme('proctorings') : $url->set_scheme('proctoring');
         } else {
             $secure ? $url->set_scheme('https') : $url->set_scheme('http');

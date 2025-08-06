@@ -26,9 +26,6 @@ use quizaccess_proctoring\shared_lib as NED;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->dirroot . '/mod/quiz/accessrule/accessrulebase.php');
-
-
 /**
  * quizaccess_proctoring
  */
@@ -41,12 +38,12 @@ class quizaccess_proctoring extends quiz_access_rule_base
      *
      * @return bool
      */
-    public function is_preflight_check_required($attemptid) {
+    public function is_preflight_check_required($attemptid){
         if (!NED::is_secure()) return true;
 
         $script = $this->get_topmost_script();
         $base = basename($script);
-        if ($base == "view.php") {
+        if ($base == "view.php"){
             return true;
         } else {
             return false;
@@ -58,7 +55,7 @@ class quizaccess_proctoring extends quiz_access_rule_base
      *
      * @return String
      */
-    public function get_topmost_script() {
+    public function get_topmost_script(){
         $backtrace = debug_backtrace(
             defined("DEBUG_BACKTRACE_IGNORE_ARGS")
                 ? DEBUG_BACKTRACE_IGNORE_ARGS
@@ -70,13 +67,13 @@ class quizaccess_proctoring extends quiz_access_rule_base
     /**
      * Get_courseid_cmid_from_preflight_form
      *
-     * @param mod_quiz_preflight_check_form $quizform
+     * @param \mod_quiz\form\preflight_check_form $quizform
      *
      * @return array
      * @noinspection PhpUnusedParameterInspection
      */
-    public function get_courseid_cmid_from_preflight_form(mod_quiz_preflight_check_form $quizform) {
-        $response = array();
+    public function get_courseid_cmid_from_preflight_form(\mod_quiz\form\preflight_check_form $quizform){
+        $response = [];
         $response['courseid'] = $this->quiz->course;
         $response['quizid'] = $this->quiz->id;
         $response['cmid'] = $this->quiz->cmid;
@@ -91,7 +88,7 @@ class quizaccess_proctoring extends quiz_access_rule_base
      * @return string
      * @noinspection PhpUnusedParameterInspection
      */
-    public function make_modal_content($quizform, $enablescreenshare, $faceidcheck) {
+    public function make_modal_content($quizform, $enablescreenshare, $faceidcheck){
         if (!NED::is_secure()) return NED::div(NED::str('error:requiresecure'), 'error');
 
         $rows = [];
@@ -115,12 +112,14 @@ class quizaccess_proctoring extends quiz_access_rule_base
      * Add any field you want to pre-flight check form. You should only do
      * something here if {@link is_preflight_check_required()} returned true.
      *
-     * @param mod_quiz_preflight_check_form $quizform the form being built.
+     * @param \mod_quiz\form\preflight_check_form $quizform the form being built.
      * @param MoodleQuickForm $mform The wrapped MoodleQuickForm.
      * @param int|null $attemptid the id of the current attempt, if there is one,
      *      otherwise null.
      */
-    public function add_preflight_check_form_fields(mod_quiz_preflight_check_form $quizform, MoodleQuickForm $mform, $attemptid) {
+    public function add_preflight_check_form_fields(\mod_quiz\form\preflight_check_form $quizform,
+        MoodleQuickForm $mform, $attemptid)
+    {
         NED::page()->add_body_class('quizaccess_proctoring');
         $mform->_attributes['class'] = 'mform quizaccess_proctoring_preflight_form';
 
@@ -166,7 +165,7 @@ class quizaccess_proctoring extends quiz_access_rule_base
         NED::js_call_amd('startAttempt', 'setupBeforeAttempt', $record);
 
         $mform->addElement('html', "<div class='quiz-check-form quizaccess-proctoring-form'>");
-        if ($enablescreenshare) {
+        if ($enablescreenshare){
             $attributesarray = $mform->_attributes;
             $attributesarray['target'] = '_blank';
             $mform->_attributes = $attributesarray;
@@ -178,7 +177,7 @@ class quizaccess_proctoring extends quiz_access_rule_base
         $actionbtns[] = $button('allow_camera_btn', 'modal:allowcamera');
         if ($enablescreenshare){
             $actionbtns[] = $button('share_screen_btn', 'modal:sharescreenbtn');
-            if ($faceidcheck) {
+            if ($faceidcheck){
                 $actionbtns[] = $dspan('face_validation_result','modal:pending','modal:facevalidation');
             }
         }
@@ -208,11 +207,11 @@ class quizaccess_proctoring extends quiz_access_rule_base
      *
      * @return array the update $errors array;
      */
-    public function validate_preflight_check($data, $files, $errors, $attemptid) {
+    public function validate_preflight_check($data, $files, $errors, $attemptid){
         if (!NED::is_secure()){
             $errors['error:requiresecure'] = NED::str('error:requiresecure');
         }
-        if (empty($data['proctoring'])) {
+        if (empty($data['proctoring'])){
             $errors['proctoring'] = NED::str('youmustagree');
         }
 
@@ -230,8 +229,8 @@ class quizaccess_proctoring extends quiz_access_rule_base
      *
      * @return quiz_access_rule_base|quizaccess_proctoring|null
      */
-    public static function make(quiz $quizobj, $timenow, $canignoretimelimits) {
-        if (empty($quizobj->get_quiz()->proctoringrequired)) {
+    public static function make(quiz $quizobj, $timenow, $canignoretimelimits){
+        if (empty($quizobj->get_quiz()->proctoringrequired)){
             return null;
         }
         return new self($quizobj, $timenow);
@@ -245,13 +244,13 @@ class quizaccess_proctoring extends quiz_access_rule_base
      * @param mod_quiz_mod_form $quizform the quiz settings form that is being built.
      * @param MoodleQuickForm $mform the wrapped MoodleQuickForm.
      */
-    public static function add_settings_form_fields(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
+    public static function add_settings_form_fields(mod_quiz_mod_form $quizform, MoodleQuickForm $mform){
         $mform->addElement('select', 'proctoringrequired',
             NED::str('proctoringrequired'),
-            array(
+            [
                 0 => NED::str('notrequired'),
                 1 => NED::str('proctoringrequiredoption'),
-            ));
+            ]);
         $mform->addHelpButton('proctoringrequired', 'proctoringrequired', NED::$PLUGIN_NAME);
     }
 
@@ -262,12 +261,12 @@ class quizaccess_proctoring extends quiz_access_rule_base
      * @param object $quiz the data from the quiz form, including $quiz->id
      *      which is the id of the quiz being saved.
      */
-    public static function save_settings($quiz) {
+    public static function save_settings($quiz){
         global $DB;
         if (empty($quiz->proctoringrequired)){
             static::delete_settings($quiz);
         } else {
-            if (!$DB->record_exists(NED::TABLE_QP, ['quizid' => $quiz->id])) {
+            if (!$DB->record_exists(NED::TABLE_QP, ['quizid' => $quiz->id])){
                 $record = new stdClass();
                 $record->quizid = $quiz->id;
                 $record->proctoringrequired = 1;
@@ -283,7 +282,7 @@ class quizaccess_proctoring extends quiz_access_rule_base
      * @param object $quiz the data from the database, including $quiz->id
      *      which is the id of the quiz being deleted.
      */
-    public static function delete_settings($quiz) {
+    public static function delete_settings($quiz){
         global $DB;
         $DB->delete_records(NED::TABLE_QP, ['quizid' => $quiz->id]);
     }
@@ -309,11 +308,12 @@ class quizaccess_proctoring extends quiz_access_rule_base
      *        used named placeholders, and the placeholder names should start with the
      *        plugin name, to avoid collisions.
      */
-    public static function get_settings_sql($quizid) {
-        return array(
+    public static function get_settings_sql($quizid){
+        return [
             'proctoringrequired',
             'LEFT JOIN {'.NED::TABLE_QP.'} proctoring ON proctoring.quizid = quiz.id',
-            array());
+            []
+        ];
     }
 
     /**
@@ -321,7 +321,7 @@ class quizaccess_proctoring extends quiz_access_rule_base
      * There is no obligation to return anything. If it is not appropriate to tell students
      * about this rule, then just return ''.
      *
-     * @return mixed a message, or array of messages, explaining the restriction
+     * @return array|null a message, or array of messages, explaining the restriction
      *         (may be '' if no message is appropriate).
      */
     public function description(){
@@ -391,7 +391,7 @@ class quizaccess_proctoring extends quiz_access_rule_base
         global $OUTPUT, $USER;
 
         $context = context_module::instance($this->quiz->cmid, MUST_EXIST);
-        if (NED::has_capability('viewreport', $context, $USER->id)) {
+        if (NED::has_capability('viewreport', $context, $USER->id)){
             $httplink = \quizaccess_proctoring\link_generator::get_link($this->quiz->course, $this->quiz->cmid, false, is_https());
 
             return $OUTPUT->single_button($httplink, NED::str('picturesreport'), 'get');

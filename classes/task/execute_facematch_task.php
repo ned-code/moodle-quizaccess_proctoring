@@ -38,21 +38,21 @@ class execute_facematch_task extends scheduled_task {
      *
      * @return string
      */
-    public function get_name() {
+    public function get_name(){
         return get_string('execute_facematch_task', 'quizaccess_proctoring');
     }
 
     /**
      * Updates meetings that are not expired.
      *
-     * @return boolean
+     * @return bool
      */
-    public function execute() {
+    public function execute(){
         global $DB, $CFG;
         mtrace('Initiate execute facematch task');
         try {
             execute_fm_task();
-        } catch (Exception $exception) {
+        } catch (Exception $exception){
             mtrace('error in proctoring execute facematch: '.$exception->getMessage());
         }
         return true;

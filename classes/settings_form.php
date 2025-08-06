@@ -37,11 +37,11 @@ require_login();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class quizaccess_proctoring_settings_form extends moodleform {
-
     /**
-     * The form definition.
+     * Form definition
+     * @noinspection PhpOverridingMethodVisibilityInspection
      */
-    public function definition() {
+    public function definition(){
         $form = $this->_form;
         $imagewidth = $this->_customdata['imagewidth'];
         $delay = $this->_customdata['delay'];
@@ -57,7 +57,7 @@ class quizaccess_proctoring_settings_form extends moodleform {
         $form->setType('delay', PARAM_NOTAGS);                   // Set type of element.
         $form->setDefault('delay', $delay);
 
-        $buttonarray = array();
+        $buttonarray = [];
         $attributes1 = ["id" => "savebtn"];
         $attributes2 = ["id" => "deletebtn"];
         $buttonarray[] = $form->createElement('submit', 'submitvalue',

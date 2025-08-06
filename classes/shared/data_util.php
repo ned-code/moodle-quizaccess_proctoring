@@ -23,11 +23,11 @@ trait data_util {
     /**
      * @return object
      */
-    static public function session(){
+    public static function session(){
         global $SESSION;
 
         // Initialise $SESSION if necessary.
-        if (!is_object($SESSION)) {
+        if (!is_object($SESSION)){
             $SESSION = new \stdClass();
         }
 
@@ -43,7 +43,7 @@ trait data_util {
      *
      * @return int|null - return null, if find nothing
      */
-    static public function get_cached_groupid($courseid){
+    public static function get_cached_groupid($courseid){
         return static::session()->currentgroup[$courseid] ?? null;
     }
 
@@ -56,7 +56,7 @@ trait data_util {
      *
      * @return \stdClass|null $user
      */
-    static public function get_chosen_user($user_or_id=null, $check_global_user=true){
+    public static function get_chosen_user($user_or_id=null, $check_global_user=true){
         global $USER;
 
         $userid = $user_or_id->id ?? ($user_or_id ?? 0);
@@ -93,7 +93,7 @@ trait data_util {
      *
      * @return int
      */
-    static public function get_userid_or_global($user_or_id=0){
+    public static function get_userid_or_global($user_or_id=0){
         global $USER;
 
         $userid = static::get_id($user_or_id);
@@ -108,7 +108,7 @@ trait data_util {
      *
      * @return int
      */
-    static public function get_courseid_or_global($course_or_id=null){
+    public static function get_courseid_or_global($course_or_id=null){
         global $COURSE;
 
         $courseid = static::get_id($course_or_id);
@@ -125,7 +125,7 @@ trait data_util {
      *
      * @return \stdClass|null
      */
-    static public function get_chosen_course($course_or_id=null, $check_global_course=true){
+    public static function get_chosen_course($course_or_id=null, $check_global_course=true){
         global $COURSE;
 
         $courseid = $course_or_id->id ?? ($course_or_id ?? 0);
@@ -167,7 +167,7 @@ trait data_util {
      *
      * @return object|null - return null, if there are none groups, otherwise some group object
      */
-    static public function get_chosen_group($course_or_id=null, $groupid=null){
+    public static function get_chosen_group($course_or_id=null, $groupid=null){
         $courseid = static::get_courseid_or_global($course_or_id);
         $groups  = static::get_all_user_course_groups($courseid);
         if (empty($groups)){
@@ -195,7 +195,7 @@ trait data_util {
      *
      * @return string
      */
-    static public function get_devicetype(){
+    public static function get_devicetype(){
         global $CFG;
         $res = static::g_get(__FUNCTION__);
         if (is_null($res)){
@@ -215,7 +215,7 @@ trait data_util {
      *
      * @return \core_string_manager
      */
-    static public function get_string_manager(){
+    public static function get_string_manager(){
         $res = static::g_get(__FUNCTION__);
         if (is_null($res)){
             $res = get_string_manager();
@@ -234,7 +234,7 @@ trait data_util {
      *
      * @return null|\stdClass A course object
      */
-    static public function get_course($courseid) {
+    public static function get_course($courseid){
         if (!$courseid){
             return null;
         }
@@ -265,7 +265,7 @@ trait data_util {
      *
      * @return object[]
      */
-    static public function get_all_courses($skip_site=true){
+    public static function get_all_courses($skip_site=true){
         global $DB;
         if (!static::g_get('get_course', [0, 0])){
             $courses = $DB->get_records('course');
@@ -302,7 +302,7 @@ trait data_util {
      *          Note: it's simple array-list AND it hasn't course ids as array keys
      *          If $fieldsexceptid is empty, it will be only course id in course objects
      */
-    static public function get_course_by_capability($capability, $fieldsexceptid='', $userid=null, $orderby='', $all_for_admin=true){
+    public static function get_course_by_capability($capability, $fieldsexceptid='', $userid=null, $orderby='', $all_for_admin=true){
         return get_user_capability_course($capability, $userid, $all_for_admin, $fieldsexceptid, $orderby, 0) ?: [];
     }
 
@@ -315,7 +315,7 @@ trait data_util {
      *
      * @return array|mixed|object[]
      */
-    static public function get_course_with_access($userid=null, $capabilities=[]){
+    public static function get_course_with_access($userid=null, $capabilities=[]){
         $userid = static::get_userid_or_global($userid);
         if (is_siteadmin($userid)){
             return static::get_all_courses();
@@ -384,9 +384,9 @@ trait data_util {
      * @param \stdClass|int $courseorid Optional course object if already loaded
      * @param \stdClass|int $userorid Optional userid (default = current)
      *
-     * @return \stdClass|\course_modinfo|null[] Array with 2 elements $course and $cm (or null and null)
+     * @return array{0:object|null, 1:\cm_info|null} - Array with 2 elements $course and $cm (or null and null)
      */
-    static public function get_course_and_cm_from_cmid($cmorid, $modulename='', $courseorid=null, $userorid=null){
+    public static function get_course_and_cm_from_cmid($cmorid, $modulename='', $courseorid=null, $userorid=null){
         $cmid = static::get_id($cmorid);
         if (!$cmid){
             return [null, null];
@@ -404,9 +404,9 @@ trait data_util {
             static::g_set(__FUNCTION__, $cmid, $res);
         }
 
-        list($course, $cm) = $res ?: [null, null];
+        [$course, $cm] = $res ?: [null, null];
         if ($cm && !empty($modulename) && $cm->modname !== $modulename){
-            list($course, $cm) = [null, null];
+            [$course, $cm] = [null, null];
         }
 
         return [$course, $cm];
@@ -420,7 +420,7 @@ trait data_util {
      * @return \cm_info[] Array from course-module instance to cm_info object within this course, in
      *   order of appearance
      */
-    static public function get_course_cms($courseorid, $userorid=null, $filter_modnames=[]){
+    public static function get_course_cms($courseorid, $userorid=null, $filter_modnames=[]){
         $userid = static::get_userid_or_global($userorid);
         $courseid = static::get_id($courseorid);
         $course_info = static::get_fast_modinfo($courseid, $userid);
@@ -446,7 +446,7 @@ trait data_util {
      * @return \cm_info[] Array from course-module instance to cm_info object within this course,
      *                      only which user can see and  which has view
      */
-    static public function get_course_activities($courseorid, $userorid=null){
+    public static function get_course_activities($courseorid, $userorid=null){
         $userid = static::get_userid_or_global($userorid);
         $courseid = static::get_id($courseorid);
 
@@ -454,9 +454,9 @@ trait data_util {
         if (is_null($activities)){
             $cms = static::get_course_cms($courseid, $userid);
             $activities = [];
-            foreach ($cms as $cm) {
+            foreach ($cms as $cm){
                 // Exclude activities that aren't visible or have no view link (e.g. label)
-                if (!$cm->uservisible || !$cm->has_view()) {
+                if (!$cm->uservisible || !$cm->has_view()){
                     continue;
                 }
 
@@ -487,7 +487,7 @@ trait data_util {
      *
      * @return \cm_info|null
      */
-    static public function get_cm_by_cmid($cmid, $courseorid=null, $userorid=null, $modulename=''){
+    public static function get_cm_by_cmid($cmid, $courseorid=null, $userorid=null, $modulename=''){
         if ($courseorid){
             $cms = static::get_course_cms($courseorid, $userorid);
             $cm = $cms[$cmid] ?? null;
@@ -495,7 +495,7 @@ trait data_util {
                 $cm = null;
             }
         } else {
-            list($course, $cm) = static::get_course_and_cm_from_cmid($cmid, $modulename, $courseorid, $userorid);
+            [$course, $cm] = static::get_course_and_cm_from_cmid($cmid, $modulename, $courseorid, $userorid);
         }
 
         return $cm;
@@ -509,7 +509,7 @@ trait data_util {
      *
      * @return \cm_info|object|null
      */
-    static public function get_cm_by_cmorid($cm_or_id, $courseorid=null, $userorid=null, $modulename=''){
+    public static function get_cm_by_cmorid($cm_or_id, $courseorid=null, $userorid=null, $modulename=''){
         if ($cm_or_id instanceof \cm_info){
             $cm = $cm_or_id;
             if ($courseorid && $cm->course != static::get_id($courseorid)) return null;
@@ -537,7 +537,7 @@ trait data_util {
      *
      * @return int
      */
-    static public function get_courseid_by_cmorid($cm_or_id){
+    public static function get_courseid_by_cmorid($cm_or_id){
         $cm = static::get_cm_by_cmorid($cm_or_id);
         return $cm ? $cm->course : 0;
     }
@@ -550,7 +550,7 @@ trait data_util {
      *
      * @return \course_modinfo|null
      */
-    static public function get_fast_modinfo($course_or_id, $user_or_id=null){
+    public static function get_fast_modinfo($course_or_id, $user_or_id=null){
         $courseid = static::get_id($course_or_id);
         $g_userid = static::get_userid_or_global();
         $userid = static::get_userid_or_global($user_or_id);
@@ -573,7 +573,7 @@ trait data_util {
      *
      * @return \core_availability\info_module
      */
-    static public function get_availability_info_module($cm_or_id){
+    public static function get_availability_info_module($cm_or_id){
         $cmid = static::get_id($cm_or_id);
         $res = static::g_get(__FUNCTION__, [$cmid]);
         if (is_null($res)){
@@ -592,7 +592,7 @@ trait data_util {
      *
      * @return null|object|\cm_info
      */
-    static public function get_cm_by_params($course_or_id, $itemmodule, $iteminstance){
+    public static function get_cm_by_params($course_or_id, $itemmodule, $iteminstance){
         $modinfo = static::get_fast_modinfo($course_or_id);
 
         return $modinfo->instances[$itemmodule][$iteminstance] ?? null;
@@ -609,7 +609,7 @@ trait data_util {
      *
      * @return \stdClass|null
      */
-    static public function get_user($userid){
+    public static function get_user($userid){
         if (!$userid){
             return null;
         }
@@ -637,7 +637,7 @@ trait data_util {
      * @return null|\stdClass|mixed - group object or null if not found,
      *                                if field specified - return its value (or null)
      */
-    static public function get_group($groupid, $field=null){
+    public static function get_group($groupid, $field=null){
         if (!$groupid){
             return null;
         }
@@ -663,7 +663,7 @@ trait data_util {
      *
      * @return string|null - The name of the group
      */
-    static public function get_groupname($groupid){
+    public static function get_groupname($groupid){
         return static::get_group($groupid, 'name');
     }
 
@@ -679,7 +679,7 @@ trait data_util {
      *
      * @return array|object[]|int[] users by id or list of userids
      */
-    static public function get_group_users($groupid, $only_ids=false){
+    public static function get_group_users($groupid, $only_ids=false){
         if (!$groupid){
             return null;
         }
@@ -716,7 +716,7 @@ trait data_util {
      * @return array Array[groupingid][groupid_1, groupid_2, ...] including grouping id 0 which means all groups if $courseid,
      *               else Array[courseid][groupid_1, groupid_2, ...] including course id 0 which means all groups
      */
-    static public function get_user_groupings($courseid, $userid=0){
+    public static function get_user_groupings($courseid, $userid=0){
         $get_it = static::g_get('load_all_user_groups', $courseid) ||
             ($courseid && static::g_get('load_all_user_groups', 0));
 
@@ -734,10 +734,7 @@ trait data_util {
             return $usergroups[$courseid] ?? [0 => []];
         }
 
-        $all_user_groups = [];
-        foreach ($usergroups as $cid => $usergroup){
-            $all_user_groups[$cid] = $usergroup[0] ?? [];
-        }
+        $all_user_groups = array_map(function($usergroup){ return $usergroup[0] ?? []; }, $usergroups);
         $all_user_groups[0] = array_merge(...$all_user_groups);
 
         return $all_user_groups;
@@ -757,7 +754,7 @@ trait data_util {
      *
      * @return array [groupid_1, groupid_2, ...]
      */
-    static public function get_user_groupids($courseid, $userid=0){
+    public static function get_user_groupids($courseid, $userid=0){
         $groupings = static::get_user_groupings($courseid, $userid);
         return $groupings[0] ?? [];
     }
@@ -771,7 +768,7 @@ trait data_util {
      *
      * @return array [groupid_1, groupid_2, ...]
      */
-    static public function get_course_groupids($courseid){
+    public static function get_course_groupids($courseid){
         return array_keys(static::get_all_course_groups($courseid, 0, 'g.id') ?: []);
     }
 
@@ -784,7 +781,7 @@ trait data_util {
      *
      * @param int $courseid
      */
-    static public function load_all_user_groups($courseid=0){
+    public static function load_all_user_groups($courseid=0){
         if (static::g_get(__FUNCTION__, $courseid) ||
             ($courseid && static::g_get(__FUNCTION__, 0))){
             return;
@@ -809,9 +806,9 @@ trait data_util {
         $user_groups = [];
 
         $rs = $DB->get_recordset_sql($sql, $params);
-        foreach ($rs as $group) {
+        foreach ($rs as $group){
             $all_groups[$group->userid][$group->courseid][$group->gropid] = $group->gropid;
-            if (is_null($group->groupingid)) {
+            if (is_null($group->groupingid)){
                 continue;
             }
             $user_groups[$group->userid][$group->courseid][$group->groupingid][$group->gropid] = $group->gropid;
@@ -819,7 +816,7 @@ trait data_util {
         $rs->close();
 
         foreach ($all_groups as $userid => $allgroups){
-            foreach (array_keys($allgroups) as $cid) {
+            foreach (array_keys($allgroups) as $cid){
                 $user_groups[$userid][$cid]['0'] = array_keys($allgroups[$cid]); // All user groups in the course.
             }
             // Cache the data.
@@ -847,7 +844,7 @@ trait data_util {
      * @return array returns an array of the group objects (unless you have done something very weird
      *      with the $fields option).
      */
-    static public function get_all_course_groups($courseid, $userid=0, $fields='g.*', $withmembers=false, $groupingid=0){
+    public static function get_all_course_groups($courseid, $userid=0, $fields='g.*', $withmembers=false, $groupingid=0){
         return groups_get_all_groups($courseid, $userid, $groupingid, $fields, $withmembers);
     }
 
@@ -869,7 +866,7 @@ trait data_util {
      * @return array returns an array of the group objects (unless you have done something very weird
      *      with the $fields option).
      */
-    static public function get_all_user_course_groups($courseorid, $userid=0, $fields='g.*', $withmembers=false, $groupingid=0){
+    public static function get_all_user_course_groups($courseorid, $userid=0, $fields='g.*', $withmembers=false, $groupingid=0){
         $courseid = static::get_id($courseorid);
         $userid = static::get_userid_or_global($userid);
         if (!$courseid){
@@ -889,7 +886,7 @@ trait data_util {
      *
      * @return array
      */
-    static public function get_user_list($ids_or_users){
+    public static function get_user_list($ids_or_users){
         if (empty($ids_or_users)){
             return [];
         }
@@ -926,7 +923,7 @@ trait data_util {
      *
      * @return string[]|array tags[$id => $name]
      */
-    static public function get_tags_by_cm($cm_or_id){
+    public static function get_tags_by_cm($cm_or_id){
         $cmid = static::get_id($cm_or_id);
         $tags = static::g_get(__FUNCTION__, $cmid);
         if (is_null($tags)){
@@ -946,7 +943,7 @@ trait data_util {
      *
      * @return array
      */
-    static public function get_cmids_by_tags($tags_name=[], $tags_id=[], $course_or_id=null){
+    public static function get_cmids_by_tags($tags_name=[], $tags_id=[], $course_or_id=null){
         global $DB;
         if (empty($tags_name) && empty($tags_id)){
             return [];
@@ -968,10 +965,10 @@ trait data_util {
         $where = [];
         $params = [];
         if (!empty($tags_name)){
-            list($tg_sql, $tg_params) = $DB->get_in_or_equal($tags_name, SQL_PARAMS_NAMED, 'tag_name');
+            [$tg_sql, $tg_params] = $DB->get_in_or_equal($tags_name, SQL_PARAMS_NAMED, 'tag_name');
             $where[] = 'tag.rawname '.$tg_sql;
         } else {
-            list($tg_sql, $tg_params) = $DB->get_in_or_equal($tags_id, SQL_PARAMS_NAMED, 'tag_ids');
+            [$tg_sql, $tg_params] = $DB->get_in_or_equal($tags_id, SQL_PARAMS_NAMED, 'tag_ids');
             $where[] = 'tag.id '.$tg_sql;
         }
         $params = array_merge($params, $tg_params);
@@ -997,13 +994,13 @@ trait data_util {
      *
      * @return array|bool
      */
-    static public function course_cats_has_courseid($course_cats, $courseid=0){
+    public static function course_cats_has_courseid($course_cats, $courseid=0){
         global $DB;
         if (empty($course_cats) && $course_cats != 0){
             return false;
         }
         if (!is_array($course_cats)){
-            if (is_string($course_cats) && strpos($course_cats, ',') !== false){
+            if (is_string($course_cats) && str_contains($course_cats, ',')){
                 $course_cats = explode(',', $course_cats);
             } else {
                 $course_cats = [$course_cats];
@@ -1013,7 +1010,7 @@ trait data_util {
             return true;
         }
 
-        list($cc_sql, $params) = $DB->get_in_or_equal($course_cats, SQL_PARAMS_NAMED);
+        [$cc_sql, $params] = $DB->get_in_or_equal($course_cats, SQL_PARAMS_NAMED);
         $params['cat_contextlevel'] = CONTEXT_COURSECAT;
         $params['course_contextlevel'] = CONTEXT_COURSE;
 
@@ -1047,11 +1044,11 @@ trait data_util {
      *
      * @return bool True if the user access is restricted.
      */
-    static public function cm_is_user_access_restricted_by_capability($cm_or_id, $user_or_id=null){
+    public static function cm_is_user_access_restricted_by_capability($cm_or_id, $user_or_id=null){
         $cm = static::get_cm_by_cmorid($cm_or_id);
         $capability = 'mod/' . $cm->modname . ':view';
         $capabilityinfo = get_capability_info($capability);
-        if (!$capabilityinfo) {
+        if (!$capabilityinfo){
             // Capability does not exist, no one is prevented from seeing the activity.
             return false;
         }
@@ -1074,7 +1071,7 @@ trait data_util {
      *
      * @return bool
      */
-    static protected function _calc_activity_visibility($unavailable_as_invisible=false, $uservisible=false, $availableinfo='',
+    protected static function _calc_activity_visibility($unavailable_as_invisible=false, $uservisible=false, $availableinfo='',
         $has_view=false){
         if (!$uservisible){
             // this is a student who is not allowed to see the module but might be allowed
@@ -1107,7 +1104,7 @@ trait data_util {
      *
      * @return array($uservisible, $availableinfo, $has_view) = list($uservisible, $availableinfo, $has_view)
      */
-    static protected function _get_visibility_data_by_cm_user($cm_or_id, $user_or_id=null){
+    protected static function _get_visibility_data_by_cm_user($cm_or_id, $user_or_id=null){
         $cmid = static::get_id($cm_or_id);
         $userid = static::get_userid_or_global($user_or_id);
         $res = static::g_get(__FUNCTION__, [$cmid, $userid]);
@@ -1125,7 +1122,7 @@ trait data_util {
                     break;
                 } elseif ($cm->get_modinfo()->get_user_id() == $userid){
                     // cm was loaded for the same user
-                    list($uservisible, $availableinfo, $has_view) =
+                    [$uservisible, $availableinfo, $has_view] =
                         [$cm->uservisible, $cm->availableinfo, $cm->has_view()];
                     break;
                 }
@@ -1153,9 +1150,9 @@ trait data_util {
                 }
 
                 // Check parent section.
-                if ($available) {
+                if ($available){
                     $parentsection = $modinfo->get_section_info($cm->sectionnum);
-                    if (!$parentsection->available) {
+                    if (!$parentsection->available){
                         // Do not store info from section here, as that is already
                         // presented from the section (if appropriate) - just change
                         // the flag
@@ -1168,7 +1165,7 @@ trait data_util {
                  * @see \cm_info::update_user_visible()
                  */
                 // If the module is being deleted, set the uservisible state to false and return.
-                if ($cm->deletioninprogress) {
+                if ($cm->deletioninprogress){
                     $uservisible = false;
                     $availableinfo = '';
                     break;
@@ -1199,7 +1196,7 @@ trait data_util {
                         has_capability('moodle/course:activityvisibility', $ctx, $userid));
                 // Activity that is not available, not hidden from course page and has availability
                 // info is actually visible on the course page (with availability info and without a link).
-                if (!$uservisible && $cm->visibleoncoursepage && $availableinfo) {
+                if (!$uservisible && $cm->visibleoncoursepage && $availableinfo){
                     $uservisibleoncoursepage = true;
                 }
                 */
@@ -1234,7 +1231,7 @@ trait data_util {
      *
      * @return bool - visibility $cm for the $user_or_id by NED rules
      */
-    static public function get_cm_visibility_by_user($cm_or_id, $user_or_id=null, $unavailable_as_invisible=false, $check_global_visibility=true){
+    public static function get_cm_visibility_by_user($cm_or_id, $user_or_id=null, $unavailable_as_invisible=false, $check_global_visibility=true){
         $cmid = static::get_id($cm_or_id);
         if (!$user_or_id){
             $check_global_visibility = false;
@@ -1284,7 +1281,7 @@ trait data_util {
      *
      * @return bool - visibility $cm for the $user_or_id by NED rules
      */
-    static public function get_cm_visibility_by_userlist($cm_or_id, $users_or_ids=[], $unavailable_as_invisible=false,
+    public static function get_cm_visibility_by_userlist($cm_or_id, $users_or_ids=[], $unavailable_as_invisible=false,
         $check_global_visibility=true, $rule_any=true){
         if (empty($users_or_ids)){
             // check only global user
@@ -1321,7 +1318,7 @@ trait data_util {
      *
      * @return bool - visibility $cm for the loaded user by NED rules
      */
-    static public function check_activity_visible_by_cm($cm_or_id, $unavailable_as_invisible=false){
+    public static function check_activity_visible_by_cm($cm_or_id, $unavailable_as_invisible=false){
         $cm = static::get_cm_by_cmorid($cm_or_id);
         return static::get_cm_visibility_by_user($cm, $cm->get_modinfo()->userid, $unavailable_as_invisible, false);
     }
@@ -1335,7 +1332,7 @@ trait data_util {
      *
      * @return \cm_info[]|array
      */
-    static public function get_important_activities($course_or_id, $user_or_id=null, $unavailable_as_invisible=false){
+    public static function get_important_activities($course_or_id, $user_or_id=null, $unavailable_as_invisible=false){
         $courseid = static::get_courseid_or_global($course_or_id);
         $userid = static::get_userid_or_global($user_or_id);
         $unavailable_as_invisible = (int)$unavailable_as_invisible;
@@ -1343,13 +1340,10 @@ trait data_util {
 
         if (is_null($res)){
             $cms = static::get_course_cms($courseid, $userid);
-            $res = [];
 
-            foreach ($cms as $key => $cm){
-                if (static::get_cm_visibility_by_user($cm, $userid, $unavailable_as_invisible, false)){
-                    $res[$key] = $cm;
-                }
-            }
+            $res = array_filter($cms, function($cm) use ($unavailable_as_invisible, $userid){
+                return static::get_cm_visibility_by_user($cm, $userid, $unavailable_as_invisible, false);
+            });
             static::g_set(__FUNCTION__, [$courseid, $userid, $unavailable_as_invisible], $res);
         }
 
@@ -1369,7 +1363,7 @@ trait data_util {
      *
      * @return \cm_info[]|array
      */
-    static public function get_important_activities_by_compare_list($courseid, $user_or_id=null, $compare_list=[], $unavailable_as_invisible=false){
+    public static function get_important_activities_by_compare_list($courseid, $user_or_id=null, $compare_list=[], $unavailable_as_invisible=false){
         return static::get_important_activities_by_users_and_compare_list($courseid, $user_or_id, null, $compare_list,
             $unavailable_as_invisible);
     }
@@ -1388,7 +1382,7 @@ trait data_util {
      *
      * @return \cm_info[]|array
      */
-    static public function get_important_activities_by_users($courseid, $main_user_or_id=null, $users_or_ids=[],
+    public static function get_important_activities_by_users($courseid, $main_user_or_id=null, $users_or_ids=[],
         $unavailable_as_invisible=false, $rule_any=true){
         return static::get_important_activities_by_users_and_compare_list($courseid, $main_user_or_id, $users_or_ids, null,
             $unavailable_as_invisible, $rule_any);
@@ -1409,7 +1403,7 @@ trait data_util {
      *
      * @return \cm_info[]|array
      */
-    static public function get_important_activities_for_users($courseid, $users_or_ids=[], $unavailable_as_invisible=false, $rule_any=true){
+    public static function get_important_activities_for_users($courseid, $users_or_ids=[], $unavailable_as_invisible=false, $rule_any=true){
         return static::get_important_activities_by_users_and_compare_list($courseid, null, $users_or_ids, null,
             $unavailable_as_invisible, $rule_any);
     }
@@ -1427,7 +1421,7 @@ trait data_util {
      *
      * @return \cm_info[]|array
      */
-    static public function get_important_activities_by_users_and_compare_list($course_or_id, $main_user_or_id=null, $users_or_ids=[],
+    public static function get_important_activities_by_users_and_compare_list($course_or_id, $main_user_or_id=null, $users_or_ids=[],
         $compare_list=null, $unavailable_as_invisible=false, $rule_any=true){
         $check_compare_list = !is_null($compare_list);
         $check_users = !empty($users_or_ids);
@@ -1486,7 +1480,7 @@ trait data_util {
      *
      * @return array [$cmid => [$userid => true]] or [$userid => [$cmid => true]]
      */
-    static public function get_cm_visibility_data($cm_or_ids, $users_or_ids, $by_userid_cmid=false,
+    public static function get_cm_visibility_data($cm_or_ids, $users_or_ids, $by_userid_cmid=false,
         $unavailable_as_invisible=false, $check_global_visibility=false){
         $visibility_data = [];
         foreach ($users_or_ids as $user_or_id){
@@ -1515,7 +1509,7 @@ trait data_util {
      *
      * @return object|null instance record from the activity table, or null if nothing found
      */
-    static public function get_module_instance($instance_id, $modname, $courseid=null){
+    public static function get_module_instance($instance_id, $modname, $courseid=null){
         if (empty($instance_id) || empty($modname)){
             return null;
         }
@@ -1549,7 +1543,7 @@ trait data_util {
      *
      * @return object|null
      */
-    static public function get_module_instance_by_cm($cm_or_id){
+    public static function get_module_instance_by_cm($cm_or_id){
         $cm = static::get_cm_by_cmorid($cm_or_id);
         if ($cm){
             return static::get_module_instance($cm->instance, $cm->modname, $cm->course);
@@ -1566,7 +1560,7 @@ trait data_util {
      *
      * @return object|false
      */
-    static public function enrol_get_manual_enrol_instances($course_or_id, $id=null){
+    public static function enrol_get_manual_enrol_instances($course_or_id, $id=null){
         $courseid = static::get_id($course_or_id);
         $res = static::g_get(__FUNCTION__, [$courseid]);
         if (is_null($res)){
@@ -1598,7 +1592,7 @@ trait data_util {
      *
      * @return void
      */
-    static public function purge_course_depended_caches($selected_keys=[]){
+    public static function purge_course_depended_caches($selected_keys=[]){
         $default_keys = [
             'get_fast_modinfo',                 /** @see shared_lib::get_fast_modinfo() */
             'get_course_and_cm_from_cmid',      /** @see shared_lib::get_course_and_cm_from_cmid() */

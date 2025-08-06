@@ -28,7 +28,7 @@ defined('MOODLE_INTERNAL') || die();
 /**
  * Custom uninstallation procedure.
  */
-function xmldb_quizaccess_proctoring_uninstall() {
+function xmldb_quizaccess_proctoring_uninstall(){
 
     return true;
 }

@@ -43,18 +43,18 @@ list ($course, $cm) = get_course_and_cm_from_cmid($cmid, 'quiz');
 require_login($course, true, $cm);
 
 
-$COURSE = $DB->get_record('course', array('id' => $courseid));
-$quiz = $DB->get_record('quiz', array('id' => $cm->instance));
+$COURSE = $DB->get_record('course', ['id' => $courseid]);
+$quiz = $DB->get_record('quiz', ['id' => $cm->instance]);
 
-$params = array(
+$params = [
     'courseid' => $courseid,
     'userid' => $studentid,
     'cmid' => $cmid
-);
-if ($studentid) {
+];
+if ($studentid){
     $params['studentid'] = $studentid;
 }
-if ($reportid) {
+if ($reportid){
     $params['reportid'] = $reportid;
 }
 
@@ -77,7 +77,7 @@ $PAGE->requires->js_call_amd( 'quizaccess_proctoring/lightbox2');
 $settingsbtn = "";
 $logbtn = "";
 
-if (has_capability('quizaccess/proctoring:deletecamshots', $context, $USER->id)) {
+if (has_capability('quizaccess/proctoring:deletecamshots', $context, $USER->id)){
     $settingspageurl = $CFG->wwwroot . '/mod/quiz/accessrule/proctoring/proctoringsummary.php?cmid='.$cmid;
     $settingsbtnlabel = "Proctoring Summary Report";
     $settingsbtn = '<a class="btn btn-primary" href="'.$settingspageurl.'">'.$settingsbtnlabel.'</a>';
@@ -87,7 +87,7 @@ if (has_capability('quizaccess/proctoring:deletecamshots', $context, $USER->id))
     $logbtn = '<a class="btn btn-primary" style="margin-left:5px" href="'.$logpageurl.'">'.$logbtnlabel.'</a>';
 }
 
-if ($submittype == 'Search' && $searchkey != null) {
+if ($submittype == 'Search' && $searchkey != null){
     $searchform = '<form action="' . $CFG->wwwroot . '/mod/quiz/accessrule/proctoring/report.php">
       <input type="hidden" id="courseid" name="courseid" value="' . $courseid . '">
       <input type="hidden" id="cmid" name="cmid" value="' . $cmid . '">
@@ -97,7 +97,7 @@ if ($submittype == 'Search' && $searchkey != null) {
       <input type="submit" name="submitType" value="clear">
     </form>
     ';
-} else if ($submittype == 'clear') {
+} elseif ($submittype == 'clear'){
     $searchform = '<form action="' . $CFG->wwwroot . '/mod/quiz/accessrule/proctoring/report.php">
       <input type="hidden" id="courseid" name="courseid" value="' . $courseid . '">
       <input type="hidden" id="cmid" name="cmid" value="' . $cmid . '">
@@ -119,7 +119,7 @@ if (has_capability('quizaccess/proctoring:deletecamshots', $context, $USER->id)
     && $courseid != null
     && $reportid != null
     && !empty($logaction)
-) {
+){
     $params = ['courseid' => $courseid, 'cmid' => $cmid, 'userid' => $studentid];
     $DB->delete_records(NED::TABLE_LOG, $params);
     $DB->delete_records(NED::TABLE_SCREENSHOT, $params);
@@ -128,7 +128,7 @@ if (has_capability('quizaccess/proctoring:deletecamshots', $context, $USER->id)
     $filesql = 'SELECT * FROM {files}
     WHERE userid = :studentid  AND contextid = :contextid  AND component = \'quizaccess_proctoring\' AND filearea = \'picture\'';
 
-    $params = array();
+    $params = [];
     $params["studentid"] = $studentid;
     $params["contextid"] = $context->id;
 
@@ -137,49 +137,49 @@ if (has_capability('quizaccess/proctoring:deletecamshots', $context, $USER->id)
     $fs = get_file_storage();
     foreach ($usersfile as $file):
         // Prepare file record object.
-        $fileinfo = array(
+        $fileinfo = [
             'component' => 'quizaccess_proctoring',
             'filearea' => 'picture',     // Usually = table name.
             'itemid' => $file->itemid,               // Usually = ID of row in table.
             'contextid' => $context->id, // ID of context.
             'filepath' => '/',           // Any path beginning and ending in /.
-            'filename' => $file->filename); // Any filename.
+            'filename' => $file->filename
+        ]; // Any filename.
 
         // Get file.
         $file = $fs->get_file($fileinfo['contextid'], $fileinfo['component'], $fileinfo['filearea'],
             $fileinfo['itemid'], $fileinfo['filepath'], $fileinfo['filename']);
 
         // Delete it if it exists.
-        if ($file) {
+        if ($file){
             $file->delete();
         }
     endforeach;
     $url2 = new moodle_url(
         '/mod/quiz/accessrule/proctoring/report.php',
-        array(
+        [
             'courseid' => $courseid,
             'cmid' => $cmid
-        )
+        ]
     );
     redirect($url2, 'Images deleted!', -11);
 }
 echo $OUTPUT->header();
 echo '<div id="main">
-<h2>' . NED::str('eprotroringreports') . '' . $quiz->name . '</h2>'.'
+<h2>' . NED::str('eprotroringreports'). $quiz->name . '</h2>'.'
 <br/><br/><div style="float: left">'.$searchform.'</div>'.'<div style="float: right">'.$settingsbtn.$logbtn.'</div><br/><br/>
 <div class="box generalbox m-b-1 adminerror alert alert-info p-y-1">'
     . NED::str('eprotroringreportsdesc') . '</div>
 ';
-if (
-    has_capability('quizaccess/proctoring:viewreport', $context, $USER->id) &&
-    $cmid != null &&
-    $courseid != null) {
+if (has_capability('quizaccess/proctoring:viewreport', $context, $USER->id) &&
+    $cmid != null && $courseid != null
+){
 
     $table = NED::TABLE_LOG;
     $table_warnings = NED::TABLE_WARNINGS;
 
     // Check if report if for some user.
-    if ($studentid != null && $cmid != null && $courseid != null && $reportid != null) {
+    if ($studentid != null && $reportid != null){
         // Report for this user.
         $sql = " SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, "
          . " e.status as status, "
@@ -191,7 +191,7 @@ if (
          ." WHERE e.courseid = '$courseid' AND e.cmid = '$cmid' AND u.id = '$studentid' AND e.id = '$reportid' ";
     }
 
-    if ($studentid == null && $cmid != null && $courseid != null) {
+    if ($studentid == null){
         // Report for all users.
         $sql = " SELECT  DISTINCT e.userid as studentid, u.firstname as firstname, u.lastname as lastname, "
                 ." u.email as email,pfw.reportid as warningid, max(e.webcampicture) as webcampicture, "
@@ -204,7 +204,7 @@ if (
                 ." group by e.userid, u.firstname, u.lastname, u.email, pfw.reportid ";
     }
 
-    if ($studentid == null && $cmid != null && $searchkey != null && $submittype == "clear") {
+    if ($studentid == null && $searchkey != null && $submittype == "clear"){
         // Report for searched users.
         $sql = " SELECT  DISTINCT e.userid as studentid, u.firstname as firstname, u.lastname as lastname, "
                 ." u.email as email, pfw.reportid as warningid, max(e.webcampicture) as webcampicture, "
@@ -217,7 +217,7 @@ if (
                 ." group by e.userid, u.firstname, u.lastname, u.email, pfw.reportid ";
     }
 
-    if ($studentid == null && $cmid != null && $searchkey != null && $submittype == "Search") {
+    if ($studentid == null && $searchkey != null && $submittype == "Search"){
         // Report for searched users.
         $sql = " SELECT  DISTINCT e.userid as studentid, u.firstname as firstname, u.lastname as lastname, "
                 ." u.email as email, pfw.reportid as warningid, max(e.webcampicture) as webcampicture, "
@@ -237,15 +237,15 @@ if (
     // Print report.
     $table = new flexible_table('proctoring-report-' . $COURSE->id . '-' . $cmid);
 
-    $table->define_columns(array('fullname', 'email', 'dateverified', 'warnings', 'actions'));
+    $table->define_columns(['fullname', 'email', 'dateverified', 'warnings', 'actions']);
     $table->define_headers(
-        array(
+        [
             get_string('user'),
             get_string('email'),
             NED::str('dateverified'),
             NED::str('warninglabel'),
             NED::str('actions'),
-        )
+        ]
     );
     $table->define_baseurl($url);
 
@@ -254,7 +254,7 @@ if (
     $table->setup();
 
     // Prepare data.
-    if ($studentid == null && $cmid != null && $searchkey != null && $submittype == "Search") {
+    if ($studentid == null && $cmid != null && $searchkey != null && $submittype == "Search"){
         // Report for searched users.
         $params = ['firstnamelike' => "%$searchkey%", 'lastnamelike' => "%$searchkey%", 'emaillike' => "%$searchkey%"];
         $sqlexecuted = $DB->get_recordset_sql($sql, $params);
@@ -263,8 +263,8 @@ if (
     }
 
 
-    foreach ($sqlexecuted as $info) {
-        $data = array();
+    foreach ($sqlexecuted as $info){
+        $data = [];
         $data[] = '<a href="' . $CFG->wwwroot . '/user/view.php?id=' . $info->studentid .
             '&course=' . $courseid . '" target="_blank">' . $info->firstname . ' ' . $info->lastname . '</a>';
 
@@ -289,9 +289,9 @@ if (
 
 
     // Print image results.
-    if ($studentid != null && $cmid != null && $courseid != null && $reportid != null) {
+    if ($studentid != null && $cmid != null && $courseid != null && $reportid != null && $table->started_output){
 
-        $data = array();
+        $data = [];
         $table = NED::TABLE_LOG;
         $sql = "SELECT e.id as reportid, e.userid as studentid, e.webcampicture as webcampicture, e.status as status,
         e.timemodified as timemodified, u.firstname as firstname, u.lastname as lastname, u.email as email, e.awsscore, e.awsflag
@@ -321,7 +321,7 @@ if (
         $user = core_user::get_user($studentid);
         $thresholdvalue = (int)NED::get_config('awsfcthreshold');
 
-        foreach ($sqlexecuted as $info) {
+        foreach ($sqlexecuted as $info){
             if (empty($info->webcampicture)) continue;
 
             $fname = basename($info->webcampicture, '.png');
@@ -338,11 +338,12 @@ if (
             $pictures[] = NED::link($url, $img, 'proctoring-pictures', ['data-lightbox' => 'procImages', 'data-title' => $username]);
         }
 
-        $analyzeparam = array('studentid' => $studentid, 'cmid' => $cmid, 'courseid' => $courseid, 'reportid' => $reportid);
-        $analyzeurl = new moodle_url('/mod/quiz/accessrule/proctoring/analyzeimage.php', $analyzeparam);
-        $userinfo = '<table border="0" width="110" height="160px">
+        foreach ($sqlexecuted as $info){
+            $analyzeparam = ['studentid' => $studentid, 'cmid' => $cmid, 'courseid' => $courseid, 'reportid' => $reportid];
+            $analyzeurl = new moodle_url('/mod/quiz/accessrule/proctoring/analyzeimage.php', $analyzeparam);
+            $userinfo = '<table border="0" width="110" height="160px">
                         <tr height="120" style="background-color: transparent;">
-                            <td style="border: unset;">'.$OUTPUT->user_picture($user, array('size' => 100)).'</td>
+                            <td style="border: unset;">' . $OUTPUT->user_picture($user, ['size' => 100]) . '</td>
                         </tr>
                         <tr height="50">
                             <td style="border: unset;"><b>' . $info->firstname . ' ' . $info->lastname . '</b></td>
@@ -351,9 +352,10 @@ if (
                             <td style="border: unset;"><b>' . $info->email . '</b></td>
                         </tr>
                         <tr height="50">
-                            <td><a href="'.$analyzeurl.'" class="btn btn-primary">Analyze Images</a></td>
+                            <td><a href="' . $analyzeurl . '" class="btn btn-primary">Analyze Images</a></td>
                         </tr>
                     </table>';
+        }
 
         $table = NED::TABLE_SCREENSHOT;
         $sqlscreenshot = " SELECT "
@@ -372,7 +374,7 @@ if (
                         ." AND u.id = '$studentid' ";
         $screenshots = $DB->get_recordset_sql($sqlscreenshot);
         $screenshottaken = [];
-        foreach ($screenshots as $info) {
+        foreach ($screenshots as $info){
             if (empty($info->screenshot)) continue;
 
             $fname = basename($info->screenshot, '.png');
@@ -384,11 +386,11 @@ if (
             $screenshottaken[] = NED::link($url, $img, 'proctoring-pictures', ['data-lightbox' => 'procImages', 'data-title' => $username]);
         }
 
-        $datapictures = array(
-            $userinfo,
+        $datapictures = [
+            $userinfo ?? '',
             join("\n", $pictures),
             join("\n", $screenshottaken),
-        );
+        ];
         $tablepictures->add_data($datapictures);
         $tablepictures->finish_html();
     }

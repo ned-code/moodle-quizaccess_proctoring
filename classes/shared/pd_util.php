@@ -33,7 +33,7 @@ trait pd_util {
      *
      * @return array - menu with $firstname data as key, and $secondname data as values
      */
-    static public function records2menu($records=[], $secondname='name', $firstname='id', $separator=' ', $plugin=null){
+    public static function records2menu($records=[], $secondname='name', $firstname='id', $separator=' ', $plugin=null){
         $menu = [];
         $plugin = $plugin ?? static::$PLUGIN_NAME;
         if (empty($records) || empty($secondname) || empty($firstname)){
@@ -84,7 +84,7 @@ trait pd_util {
      *
      * @return array - menu with translated strings
      */
-    static public function strings2menu($strings=[], $use_string_as_key=false,  $surround='', $additional_data=[], $plugin=null){
+    public static function strings2menu($strings=[], $use_string_as_key=false,  $surround='', $additional_data=[], $plugin=null){
         $menu = [];
         if (empty($strings)){
             return $menu;

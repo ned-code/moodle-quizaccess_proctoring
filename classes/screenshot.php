@@ -36,14 +36,14 @@ defined('MOODLE_INTERNAL') || die();
 class screenshot extends persistent {
 
     /** Table name for the persistent. */
-    const TABLE = NED::TABLE_LOG;
+    public const TABLE = NED::TABLE_LOG;
 
     /**
      * Return the definition of the properties of this model.
      *
      * @return array
      */
-    protected static function define_properties() {
+    protected static function define_properties(){
         return [
             'courseid' => [
                 'type' => PARAM_INT,

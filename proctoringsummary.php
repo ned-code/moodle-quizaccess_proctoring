@@ -31,9 +31,9 @@ $cmid = required_param('cmid', PARAM_INT);
 $context = context_module::instance($cmid, MUST_EXIST);
 require_capability('quizaccess/proctoring:deletecamshots', $context);
 
-$params = array(
+$params = [
     'cmid' => $cmid
-);
+];
 $url = new moodle_url(
     '/mod/quiz/accessrule/proctoring/proctoringsummary.php',
     $params
@@ -48,7 +48,7 @@ $PAGE->set_title('Proctoring Summary Report');
 $PAGE->set_heading('Proctoring Summary Report');
 
 $PAGE->navbar->add('Proctoring Report', $url);
-$PAGE->requires->js_call_amd('quizaccess_proctoring/additionalSettings', 'setup', array());
+$PAGE->requires->js_call_amd('quizaccess_proctoring/additionalSettings', 'setup', []);
 
 echo $OUTPUT->header();
 
@@ -104,11 +104,11 @@ echo '<table class="flexible table table_class">
 
 echo '<tbody>';
 
-foreach ($coursesummary as $row) {
-    $params1 = array(
+foreach ($coursesummary as $row){
+    $params1 = [
         'cmid' => $cmid,
         'type' => 'course',
-    );
+    ];
     $url1 = new moodle_url(
         '/mod/quiz/accessrule/proctoring/bulkdelete.php',
         $params1
@@ -123,12 +123,12 @@ foreach ($coursesummary as $row) {
     echo '<td class="no-border">'.$deletelink1."</td>";
     echo '</tr>';
 
-    foreach ($quizsummary as $row2) {
-        if ($row->courseid == $row2->courseid) {
-            $params2 = array(
+    foreach ($quizsummary as $row2){
+        if ($row->courseid == $row2->courseid){
+            $params2 = [
                 'cmid' => $cmid,
                 'type' => 'quiz',
-            );
+            ];
             $url2 = new moodle_url(
                 '/mod/quiz/accessrule/proctoring/bulkdelete.php',
                 $params2

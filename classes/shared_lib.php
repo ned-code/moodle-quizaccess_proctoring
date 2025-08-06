@@ -19,18 +19,18 @@ defined('MOODLE_INTERNAL') || die();
 class shared_lib extends \quizaccess_proctoring\shared\base_class {
     use \quizaccess_proctoring\shared\base_trait;
 
-    const PLUGIN_NAME = 'quizaccess_proctoring';
+    public const PLUGIN_NAME = 'quizaccess_proctoring';
 
-    const TABLE_QP          = 'quizaccess_proctoring';
-    const TABLE_LOG         = 'quizaccess_proctoring_logs';
-    const TABLE_SCREENSHOT  = 'quizaccess_proctoring_screen';
-    const TABLE_WARNINGS    = 'quizaccess_proctoring_warns';
-    const TABLE_FACEMATCH   = 'quizaccess_proctoring_face';
-    const TABLE_AWS         = 'quizaccess_proctoring_aws';
+    public const TABLE_QP = 'quizaccess_proctoring';
+    public const TABLE_LOG = 'quizaccess_proctoring_logs';
+    public const TABLE_SCREENSHOT = 'quizaccess_proctoring_screen';
+    public const TABLE_WARNINGS = 'quizaccess_proctoring_warns';
+    public const TABLE_FACEMATCH = 'quizaccess_proctoring_face';
+    public const TABLE_AWS = 'quizaccess_proctoring_aws';
 
-    const CLASS_CONTAINER = self::PLUGIN_NAME.'-container';
-    const CLASS_ROW = self::PLUGIN_NAME.'-row';
-    const CLASS_COL = self::PLUGIN_NAME.'-col';
+    public const CLASS_CONTAINER = self::PLUGIN_NAME.'-container';
+    public const CLASS_ROW = self::PLUGIN_NAME.'-row';
+    public const CLASS_COL = self::PLUGIN_NAME.'-col';
 
     /**
      * Return camshotdelay config

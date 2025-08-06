@@ -32,50 +32,50 @@ trait plugin_dependencies {
     /**
      * @var string @readonly - short name (for example 'proctoring')
      */
-    static public $PLUGIN;
+    public static $PLUGIN;
     /**
      * @var string @readonly - 'block', 'local' etc
      */
-    static public $PLUGIN_TYPE;
+    public static $PLUGIN_TYPE;
     /**
      * @var string @readonly - version plugin name (for example 'quizaccess_proctoring')
      */
-    static public $PLUGIN_NAME;
+    public static $PLUGIN_NAME;
     /**
      * @var string @readonly - Full URL for plugin directory, https://www.site.com/mod/quiz/accessrule/proctoring
      */
-    static public $PLUGIN_FULL_URL;
+    public static $PLUGIN_FULL_URL;
     /**
      * @var string @readonly - absolute path for plugin directory, /var/www/mod/quiz/accessrule/proctoring
      */
-    static public $PLUGIN_PATH;
+    public static $PLUGIN_PATH;
     /**
      * @var string @readonly - relative path for plugin directory, /mod/quiz/accessrule/proctoring
      */
-    static public $PLUGIN_URL;
+    public static $PLUGIN_URL;
     /**
      * @var string @readonly - absolute path for project directory, /var/www/
      */
-    static public $DIRROOT;
+    public static $DIRROOT;
     /**
      * @var string @readonly - absolute url to the project, https://www.site.com
      */
-    static public $WWWROOT;
+    public static $WWWROOT;
     /**
      * @var string @readonly - you can set plugin prefix here, if you set up data by dir names (not recommended)
      */
-    static public $PLUGIN_PREFIX = '';
+    public static $PLUGIN_PREFIX = '';
 
     /**
      *
      * Real protected variables
      *
      */
-    static protected $_is_init = false;
+    protected static $_is_init = false;
     /**
      * @var array @protected - use functions is_PLUGIN_exists() instead
      */
-    static protected $_PLUGINS_EXISTS = [];
+    protected static $_PLUGINS_EXISTS = [];
 
     /**
      * plugin_dependencies constructor.
@@ -87,7 +87,7 @@ trait plugin_dependencies {
     /**
      * Call this method before using the class
      */
-    static public function init(){
+    public static function init(){
         if (static::$_is_init) return;
 
         static::_before_init();
@@ -98,14 +98,14 @@ trait plugin_dependencies {
     /**
      * You can set here some data before main init method
      */
-    static protected function _before_init(){
+    protected static function _before_init(){
         return;
     }
 
     /**
      * You can set here some data after main init method
      */
-    static protected function _after_init(){
+    protected static function _after_init(){
         return;
     }
 
@@ -113,7 +113,7 @@ trait plugin_dependencies {
      * Main init method
      * Not recommended rewriting it in child classes
      */
-    static protected function _real_init(){
+    protected static function _real_init(){
         global $CFG;
 
         static::$DIRROOT = $CFG->dirroot;
@@ -168,7 +168,7 @@ trait plugin_dependencies {
      *
      * @return bool
      */
-    static public function is_plugin_exists($plugin){
+    public static function is_plugin_exists($plugin){
         static $_res = [];
 
         if (!isset($_res[$plugin])){
@@ -191,7 +191,7 @@ trait plugin_dependencies {
      *
      * @return string
      */
-    static public function str($identifier, $params=null, $plugin=null){
+    public static function str($identifier, $params=null, $plugin=null){
         if (empty($identifier)){
             return is_numeric($identifier) ? strval($identifier) : '';
         }
@@ -222,7 +222,7 @@ trait plugin_dependencies {
      *
      * @return string
      */
-    static public function str_check($identifier, $params=null, $def=null, $plugin=null){
+    public static function str_check($identifier, $params=null, $def=null, $plugin=null){
         if (empty($identifier)){
             return is_numeric($identifier) ? strval($identifier) : ($def ?: '');
         }
@@ -231,9 +231,9 @@ trait plugin_dependencies {
         $identifiers = is_array($identifier) ? $identifier : [$identifier];
         $str_m = static::get_string_manager();
 
-        foreach ($identifiers as $identifier){
-            if ($str_m->string_exists($identifier, $plugin)){
-                return static::str($identifier, $params, $plugin);
+        foreach ($identifiers as $ident){
+            if ($str_m->string_exists($ident, $plugin)){
+                return static::str($ident, $params, $plugin);
             }
         }
 
@@ -251,7 +251,7 @@ trait plugin_dependencies {
      *
      * @return array
      */
-    static public function str_arr($identifiers, $params=null, $plugin=null, $check=false, $def=null){
+    public static function str_arr($identifiers, $params=null, $plugin=null, $check=false, $def=null){
         $res = [];
         foreach ($identifiers as $key => $item){
             if ($check){
@@ -278,7 +278,7 @@ trait plugin_dependencies {
      *
      * @return false|\stdClass|string|mixed hash-like object or single value, return false no config found
      */
-    static public function get_config($name=null){
+    public static function get_config($name=null){
         return \get_config(static::$PLUGIN_NAME, $name);
     }
 
@@ -292,7 +292,7 @@ trait plugin_dependencies {
      *
      * @return bool true or exception
      */
-    static public function set_config($name, $value){
+    public static function set_config($name, $value){
         return \set_config($name, $value, static::$PLUGIN_NAME);
     }
 
@@ -301,9 +301,9 @@ trait plugin_dependencies {
      *
      * @param string $name the key to set
      *
-     * @return boolean whether the operation succeeded.
+     * @return bool whether the operation succeeded.
      */
-    static public function unset_config($name){
+    public static function unset_config($name){
         return \unset_config($name, static::$PLUGIN_NAME);
     }
 
@@ -318,7 +318,7 @@ trait plugin_dependencies {
      *
      * @return \moodle_url
      */
-    static public function url($url, $params=null, $anchor=null, $from_plugin=false){
+    public static function url($url, $params=null, $anchor=null, $from_plugin=false){
         return new \moodle_url(static::path($url, false, $from_plugin), $params, $anchor);
     }
 
@@ -334,7 +334,7 @@ trait plugin_dependencies {
      *
      * @return false|string
      */
-    static public function path($path, $use_filepath=true, $from_plugin=false, $false_if_wrong=false){
+    public static function path($path, $use_filepath=true, $from_plugin=false, $false_if_wrong=false){
         $prefix = $use_filepath ? static::$DIRROOT : static::$WWWROOT;
         if (empty($path) || !is_string($path)){
             if (!$use_filepath && $path instanceof \moodle_url){
@@ -372,7 +372,7 @@ trait plugin_dependencies {
      *
      * @return string
      */
-    static public function get_full_capability($capability){
+    public static function get_full_capability($capability){
         static::str_rem_prefix($capability, '~');
 
         if (!static::str_has($capability, '/')){
@@ -397,14 +397,14 @@ trait plugin_dependencies {
      * Guest and not-logged-in users can never get any dangerous capability - that is any write capability
      * or capabilities with XSS, config or data loss risks.
      *
-     * @param string            $capability the name of the capability to check. For example mod/forum:view
-     * @param \context          $context    (optional) the context to check the capability in. By default (null) check context_system
-     * @param integer|\stdClass $user       (optional) A user id or object. By default (null) checks the permissions of the current user.
-     * @param boolean           $doanything (optional) If false, ignores effect of admin role assignment
+     * @param string        $capability the name of the capability to check. For example mod/forum:view
+     * @param \context      $context    (optional) the context to check the capability in. By default (null) check context_system
+     * @param int|\stdClass $user       (optional) A user id or object. By default (null) checks the permissions of the current user.
+     * @param bool          $doanything (optional) If false, ignores effect of admin role assignment
      *
-     * @return boolean true if the user has this capability. Otherwise false.
+     * @return bool true if the user has this capability. Otherwise false.
      */
-    static public function has_capability($capability, $context=null, $user=null, $doanything=true){
+    public static function has_capability($capability, $context=null, $user=null, $doanything=true){
         if (empty($capability) || !is_string($capability)) return false;
         $context = $context ?? \context_system::instance();
 
@@ -418,19 +418,19 @@ trait plugin_dependencies {
      * the capabilities that most users are likely to have first in the list for best
      * performance.
      *
-     * @param array|string[]    $capabilities an array of capability names.
-     * @param \context          $context    (optional) the context to check the capability in. By default (null) check context_system
-     * @param integer|\stdClass $user       (optional) A user id or object. By default (null) checks the permissions of the current user.
-     * @param boolean           $doanything (optional) If false, ignores effect of admin role assignment
+     * @param array|string[] $capabilities an array of capability names.
+     * @param \context       $context      (optional) the context to check the capability in. By default (null) check context_system
+     * @param int|\stdClass  $user         (optional) A user id or object. By default (null) checks the permissions of the current user.
+     * @param bool           $doanything   (optional) If false, ignores effect of admin role assignment
      *
-     * @return boolean true if the user has any of these capabilities. Otherwise false.
+     * @return bool true if the user has any of these capabilities. Otherwise false.
      * @see has_capability()
      *
      * @category access
      */
-    static public function has_any_capability(array $capabilities, $context=null, $user=null, $doanything=true) {
-        foreach ($capabilities as $capability) {
-            if (static::has_capability($capability, $context, $user, $doanything)) {
+    public static function has_any_capability(array $capabilities, $context=null, $user=null, $doanything=true){
+        foreach ($capabilities as $capability){
+            if (static::has_capability($capability, $context, $user, $doanything)){
                 return true;
             }
         }
@@ -447,16 +447,16 @@ trait plugin_dependencies {
      * @category access
      * @see      has_capability()
      *
-     * @param array|string[]    $capabilities an array of capability names.
-     * @param \context          $context    (optional) the context to check the capability in. By default (null) check context_system
-     * @param integer|\stdClass $user       (optional) A user id or object. By default (null) checks the permissions of the current user.
-     * @param boolean           $doanything (optional) If false, ignores effect of admin role assignment
+     * @param array|string[] $capabilities an array of capability names.
+     * @param \context       $context      (optional) the context to check the capability in. By default (null) check context_system
+     * @param int|\stdClass  $user         (optional) A user id or object. By default (null) checks the permissions of the current user.
+     * @param bool           $doanything   (optional) If false, ignores effect of admin role assignment
      *
-     * @return boolean true if the user has all of these capabilities. Otherwise false.
+     * @return bool true if the user has all of these capabilities. Otherwise false.
      */
-    static public function has_all_capabilities(array $capabilities, $context=null, $user=null, $doanything=true) {
-        foreach ($capabilities as $capability) {
-            if (!static::has_capability($capability, $context, $user, $doanything)) {
+    public static function has_all_capabilities(array $capabilities, $context=null, $user=null, $doanything=true){
+        foreach ($capabilities as $capability){
+            if (!static::has_capability($capability, $context, $user, $doanything)){
                 return false;
             }
         }
@@ -474,18 +474,18 @@ trait plugin_dependencies {
      *
      * @see has_capability()
      *
-     * @param string            $capability the name of the capability to check. For example mod/forum:view
-     * @param \context          $context        (optional) the context to check the capability in. By default (null) check context_system
-     * @param integer|\stdClass $userid         (optional) A user id or object. By default (null) checks the permissions of the current user.
-     * @param boolean           $doanything     (optional) If false, ignores effect of admin role assignment
-     * @param string            $errormessage   (optional) The error string to to user. Defaults to 'nopermissions'.
-     * @param string            $stringfile     (optional) The language file to load the error string from. Defaults to 'error'.
+     * @param string        $capability   the name of the capability to check. For example mod/forum:view
+     * @param \context      $context      (optional) the context to check the capability in. By default (null) check context_system
+     * @param int|\stdClass $userid       (optional) A user id or object. By default (null) checks the permissions of the current user.
+     * @param bool          $doanything   (optional) If false, ignores effect of admin role assignment
+     * @param string        $errormessage (optional) The error string to to user. Defaults to 'nopermissions'.
+     * @param string        $stringfile   (optional) The language file to load the error string from. Defaults to 'error'.
      *
      * @return void terminates with an error if the user does not have the given capability.
      */
-    static public function require_capability($capability, $context=null, $userid=null, $doanything=true,
-        $errormessage='nopermissions', $stringfile='') {
-        if (!static::has_capability($capability, $context, $userid, $doanything)) {
+    public static function require_capability($capability, $context=null, $userid=null, $doanything=true,
+        $errormessage='nopermissions', $stringfile=''){
+        if (!static::has_capability($capability, $context, $userid, $doanything)){
             throw new \required_capability_exception($context, static::get_full_capability($capability), $errormessage, $stringfile);
         }
     }
@@ -500,18 +500,18 @@ trait plugin_dependencies {
      *
      * @see require_all_capabilities()
      *
-     * @param array|string[]    $capabilities the name of the capability to check. For example mod/forum:view
-     * @param \context          $context        (optional) the context to check the capability in. By default (null) check context_system
-     * @param integer|\stdClass $userid         (optional) A user id or object. By default (null) checks the permissions of the current user.
-     * @param boolean           $doanything     (optional) If false, ignores effect of admin role assignment
-     * @param string            $errormessage   (optional) The error string to to user. Defaults to 'nopermissions'.
-     * @param string            $stringfile     (optional) The language file to load the error string from. Defaults to 'error'.
+     * @param array|string[] $capabilities the name of the capability to check. For example mod/forum:view
+     * @param \context       $context      (optional) the context to check the capability in. By default (null) check context_system
+     * @param int|\stdClass  $userid       (optional) A user id or object. By default (null) checks the permissions of the current user.
+     * @param bool           $doanything   (optional) If false, ignores effect of admin role assignment
+     * @param string         $errormessage (optional) The error string to to user. Defaults to 'nopermissions'.
+     * @param string         $stringfile   (optional) The language file to load the error string from. Defaults to 'error'.
      *
      * @return void terminates with an error if the user does not have all capabilities from a list.
      */
-    static public function require_all_capabilities($capabilities, $context=null, $userid=null, $doanything=true,
-        $errormessage='nopermissions', $stringfile='') {
-        foreach ($capabilities as $capability) {
+    public static function require_all_capabilities($capabilities, $context=null, $userid=null, $doanything=true,
+        $errormessage='nopermissions', $stringfile=''){
+        foreach ($capabilities as $capability){
             static::require_capability($capability, $context, $userid, $doanything, $errormessage, $stringfile);
         }
     }
@@ -526,17 +526,17 @@ trait plugin_dependencies {
      *
      * @see has_any_capability()
      *
-     * @param array|string[]    $capabilities the name of the capability to check. For example mod/forum:view
-     * @param \context          $context        (optional) the context to check the capability in. By default (null) check context_system
-     * @param integer|\stdClass $userid         (optional) A user id or object. By default (null) checks the permissions of the current user.
-     * @param boolean           $doanything     (optional) If false, ignores effect of admin role assignment
-     * @param string            $errormessage   (optional) The error string to to user. Defaults to 'nopermissions'.
-     * @param string            $stringfile     (optional) The language file to load the error string from. Defaults to 'error'.
+     * @param array|string[] $capabilities the name of the capability to check. For example mod/forum:view
+     * @param \context       $context      (optional) the context to check the capability in. By default (null) check context_system
+     * @param int|\stdClass  $userid       (optional) A user id or object. By default (null) checks the permissions of the current user.
+     * @param bool           $doanything   (optional) If false, ignores effect of admin role assignment
+     * @param string         $errormessage (optional) The error string to to user. Defaults to 'nopermissions'.
+     * @param string         $stringfile   (optional) The language file to load the error string from. Defaults to 'error'.
      *
      * @return void terminates with an error if the user does not have any one of capabilities from a list
      */
-    static public function require_any_capabilities($capabilities, $context=null, $userid=null, $doanything=true,
-        $errormessage='nopermissions', $stringfile='') {
+    public static function require_any_capabilities($capabilities, $context=null, $userid=null, $doanything=true,
+        $errormessage='nopermissions', $stringfile=''){
         if (!static::has_any_capability($capabilities, $context, $userid, $doanything)){
             throw new \required_capability_exception($context, static::get_full_capability(reset($capabilities)), $errormessage, $stringfile);
         }
@@ -551,9 +551,9 @@ trait plugin_dependencies {
      * @param                 $templatename
      * @param array|\stdClass $context Context containing data for the template.
      *
-     * @return string|boolean
+     * @return string|bool
      */
-    static public function render_from_template($templatename, $context=null){
+    public static function render_from_template($templatename, $context=null){
         if (empty($templatename) || !is_string($templatename)) return false;
 
         static::str_rem_prefix($templatename, '~');

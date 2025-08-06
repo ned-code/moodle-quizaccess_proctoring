@@ -24,11 +24,11 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2025041500;
 $plugin->component = 'quizaccess_proctoring';
-$plugin->release = '1.2.42';
-$plugin->requires = 2019052000;
-$plugin->maturity = MATURITY_BETA;
-$plugin->dependencies = array(
+$plugin->version = 2025080600;      // (Date: YYYYMMDDXX)
+$plugin->release = '4.5.5.0.0';
+$plugin->maturity = MATURITY_STABLE;
+$plugin->requires = 2024100705.00;  // Moodle 4.5.5 (Build: 20250609)
+$plugin->dependencies = [
     'local_aws' => 2022033100
-);
+];

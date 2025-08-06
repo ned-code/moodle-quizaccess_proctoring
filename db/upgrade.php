@@ -34,7 +34,7 @@
  * Please do not forget to use upgrade_set_timeout()
  * before any action that may take longer time to finish.
  *
- * @package   core_install
+ * @package   quizaccess_proctoring
  * @category  upgrade
  * @copyright 2006 onwards Martin Dougiamas  http://dougiamas.com
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -58,7 +58,7 @@ use quizaccess_proctoring\shared_lib as NED;
  *
  * Each upgrade step has a fixed structure, that can be summarised as follows:
  *
- * if ($oldversion < XXXXXXXXXX.XX) {
+ * if ($oldversion < XXXXXXXXXX.XX){
  *     // Explanation of the update step, linking to issue in the Tracker if necessary
  *     upgrade_set_timeout(XX); // Optional for big tasks
  *     // Code to execute goes here, usually the XMLDB Editor will
@@ -89,7 +89,7 @@ use quizaccess_proctoring\shared_lib as NED;
  * @noinspection PhpUnused
  */
 
-function xmldb_quizaccess_proctoring_upgrade($oldversion) {
+function xmldb_quizaccess_proctoring_upgrade($oldversion){
     global $CFG, $DB;
 
     require_once($CFG->libdir.'/db/upgradelib.php'); // Core Upgrade-related functions.
@@ -98,25 +98,25 @@ function xmldb_quizaccess_proctoring_upgrade($oldversion) {
         upgrade_plugin_savepoint($result, $version, 'quizaccess', 'proctoring');
     };
 
-    if ($oldversion < 2021061102) {
+    if ($oldversion < 2021061102){
         // Define field output to be added to task_log.
         $table = new xmldb_table(NED::TABLE_LOG);
         $field1 = new xmldb_field('awsscore', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
         $field2 = new xmldb_field('awsflag', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
 
         // Conditionally launch add field forcedownload.
-        if (!$dbman->field_exists($table, $field1)) {
+        if (!$dbman->field_exists($table, $field1)){
             $dbman->add_field($table, $field1);
         }
 
-        if (!$dbman->field_exists($table, $field2)) {
+        if (!$dbman->field_exists($table, $field2)){
             $dbman->add_field($table, $field2);
         }
 
         $plugin_savepoint(2021061102);
     }
 
-    if ($oldversion < 2021061104) {
+    if ($oldversion < 2021061104){
         // Define field output to be added to task_log.
         $table = new xmldb_table(NED::TABLE_FACEMATCH);
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, true, true, null, null);
@@ -124,15 +124,15 @@ function xmldb_quizaccess_proctoring_upgrade($oldversion) {
         $table->add_field('targetimageurl', XMLDB_TYPE_TEXT, '500', null, true, false, null, null);
         $table->add_field('reportid', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
         $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
-        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
         // Conditionally launch create table for fees.
-        if (!$dbman->table_exists($table)) {
+        if (!$dbman->table_exists($table)){
             $dbman->create_table($table);
         }
         $plugin_savepoint(2021061104);
     }
 
-    if ($oldversion < 2021061106) {
+    if ($oldversion < 2021061106){
         // Define field output to be added to task_log.
         $table = new xmldb_table(NED::TABLE_SCREENSHOT);
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, true, true, null, null);
@@ -143,7 +143,7 @@ function xmldb_quizaccess_proctoring_upgrade($oldversion) {
         $table->add_field('status', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
         $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
 
-        $table->add_key('id', XMLDB_KEY_PRIMARY, array('id'));
+        $table->add_key('id', XMLDB_KEY_PRIMARY, ['id']);
 
         if (!$dbman->table_exists($table)){
             $dbman->create_table($table);
@@ -152,7 +152,7 @@ function xmldb_quizaccess_proctoring_upgrade($oldversion) {
         $plugin_savepoint(2021061106);
     }
 
-    if ($oldversion < 2021070702) {
+    if ($oldversion < 2021070702){
         // Define field output to be added to task_log.
         $table = new xmldb_table(NED::TABLE_AWS);
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, true, true, null, null);
@@ -160,16 +160,16 @@ function xmldb_quizaccess_proctoring_upgrade($oldversion) {
         $table->add_field('apiresponse', XMLDB_TYPE_TEXT, '1000', null, true, false, null, null);
         $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
 
-        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
         // Conditionally launch create table for fees.
-        if (!$dbman->table_exists($table)) {
+        if (!$dbman->table_exists($table)){
             $dbman->create_table($table);
         }
 
         $plugin_savepoint(2021070702);
     }
 
-    if ($oldversion < 2021071405) {
+    if ($oldversion < 2021071405){
         // Define field output to be added to task_log.
         $table = new xmldb_table(NED::TABLE_WARNINGS);
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, true, true, null, null);
@@ -178,9 +178,9 @@ function xmldb_quizaccess_proctoring_upgrade($oldversion) {
         $table->add_field('cmid', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
         $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, true, false, 0, null);
 
-        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
         // Conditionally launch create table for fees.
-        if (!$dbman->table_exists($table)) {
+        if (!$dbman->table_exists($table)){
             $dbman->create_table($table);
         }
 

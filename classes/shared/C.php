@@ -23,22 +23,22 @@ defined('MOODLE_INTERNAL') || die();
  */
 interface C {
 
-    const NOTIFY_INFO = \core\output\notification::NOTIFY_INFO;
-    const NOTIFY_SUCCESS = \core\output\notification::NOTIFY_SUCCESS;
-    const NOTIFY_WARNING = \core\output\notification::NOTIFY_WARNING;
-    const NOTIFY_ERROR = \core\output\notification::NOTIFY_ERROR;
+    public const NOTIFY_INFO = \core\output\notification::NOTIFY_INFO;
+    public const NOTIFY_SUCCESS = \core\output\notification::NOTIFY_SUCCESS;
+    public const NOTIFY_WARNING = \core\output\notification::NOTIFY_WARNING;
+    public const NOTIFY_ERROR = \core\output\notification::NOTIFY_ERROR;
 
-    const E_NONE = 0;       // nothing
-    const E_NOTICE = 1;     // show moodle notice
-    const E_WARNING = 2;    // show php warning
-    const E_ERROR = 3;      // stop script execution
+    public const E_NONE = 0;       // nothing
+    public const E_NOTICE = 1;     // show moodle notice
+    public const E_WARNING = 2;    // show php warning
+    public const E_ERROR = 3;      // stop script execution
 
     // SQL
-    const SQL_NOW = "UNIX_TIMESTAMP()";
-    const SQL_NONE_COND = '0<>0';
-    const SQL_TRUE_COND = '1=1';
+    public const SQL_NOW = "UNIX_TIMESTAMP()";
+    public const SQL_NONE_COND = '0<>0';
+    public const SQL_TRUE_COND = '1=1';
 
     // HTML
-     const HTML_INVISIBLE = '&#8205;';
-     const HTML_SPACE = '&nbsp;';
+    public const HTML_INVISIBLE = '&#8205;';
+    public const HTML_SPACE = '&nbsp;';
 }

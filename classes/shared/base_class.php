@@ -33,5 +33,5 @@ defined('MOODLE_INTERNAL') || die();
 abstract class base_class implements C{
    use global_util;
 
-   static protected $_global_data = [];
+   protected static $_global_data = [];
 }

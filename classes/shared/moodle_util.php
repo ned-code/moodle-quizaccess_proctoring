@@ -34,7 +34,7 @@ trait moodle_util {
      *
      * @return mixed
      */
-    static public function run_function_as_admin($callback, $args=[], $required_files=[]){
+    public static function run_function_as_admin($callback, $args=[], $required_files=[]){
         global $USER;
         $is_not_admin = !is_siteadmin();
         $_user = $USER;
@@ -73,7 +73,7 @@ trait moodle_util {
      *
      * @return mixed|object|null
      */
-    static public function cfg($property_name=null, $def=null){
+    public static function cfg($property_name=null, $def=null){
         global $CFG;
         if (is_null($property_name)){
             return $CFG;
@@ -95,7 +95,7 @@ trait moodle_util {
      *
      * @return \context|\context_course|\context_module|\context_system|bool|null
      */
-    static public function ctx($courseid=null, $cmid=null, $contextid=null, $strictness=MUST_EXIST){
+    public static function ctx($courseid=null, $cmid=null, $contextid=null, $strictness=MUST_EXIST){
         if ($contextid){
            return \context::instance_by_id($contextid, $strictness);
         } elseif ($cmid){
@@ -115,7 +115,7 @@ trait moodle_util {
      * @param int                $delay
      * @param string             $messagetype
      */
-    static public function redirect($url, $message='', $delay=null, $messagetype=C::NOTIFY_INFO){
+    public static function redirect($url, $message='', $delay=null, $messagetype=C::NOTIFY_INFO){
         global $PAGE;
         if ($PAGE->state == \moodle_page::STATE_PRINTING_HEADER){
             $PAGE->set_state(\moodle_page::STATE_IN_BODY);
@@ -134,7 +134,7 @@ trait moodle_util {
      *
      * @return string
      */
-    static public function redirect_continue($url, $message='', $messagetype=C::NOTIFY_INFO, $return=false){
+    public static function redirect_continue($url, $message='', $messagetype=C::NOTIFY_INFO, $return=false){
         $output = '';
         if (!empty($message)){
             $output .= static::O()->notification($message, $messagetype);
@@ -158,7 +158,7 @@ trait moodle_util {
      * @param string $func Optional function from the module to call, defaults to just loading the AMD module.
      * @param array $params The params to pass to the function (will be serialized into JSON).
      */
-    static public function js_call_amd($module, $func='init', $params=[]){
+    public static function js_call_amd($module, $func='init', $params=[]){
         global $PAGE;
         if (empty($module)) return;
 
@@ -188,7 +188,7 @@ trait moodle_util {
      * @param string $func Optional function from the module to call, defaults to just loading the AMD module.
      * @param array  $params The params to pass to the function (will be serialized into JSON).
      */
-    static public function js_call_amds($modules, $func='init', $params=[]){
+    public static function js_call_amds($modules, $func='init', $params=[]){
         $modules = static::val2arr($modules);
         foreach ($modules as $module){
             static::js_call_amd($module, $func, $params);
@@ -203,10 +203,10 @@ trait moodle_util {
      *
      * @return false|string
      */
-    static public function add_body_class($add_body_class, $can_echo=true){
+    public static function add_body_class($add_body_class, $can_echo=true){
         global $PAGE;
         $add_body_class = static::arr2str($add_body_class);
-        if ($PAGE->state > \moodle_page::STATE_BEFORE_HEADER) {
+        if ($PAGE->state > \moodle_page::STATE_BEFORE_HEADER){
             $res = \html_writer::script("window.document.body.className += ' $add_body_class';");
             if ($can_echo){
                 echo $res;
@@ -226,7 +226,7 @@ trait moodle_util {
      *
      * @return bool
      */
-    static public function require_file($filepath, $global_all=false){
+    public static function require_file($filepath, $global_all=false){
         $filepath = static::path($filepath, true, false, true);
         if ($filepath && file_exists($filepath)){
             if ($global_all){
@@ -252,7 +252,7 @@ trait moodle_util {
      *
      * @return bool - true, if ALL files have been loaded correctly
      */
-    static public function require_files($filepaths, $global_all=false){
+    public static function require_files($filepaths, $global_all=false){
         $res = true;
         $filepaths = static::val2arr($filepaths);
         foreach ($filepaths as $filepath){
@@ -267,7 +267,7 @@ trait moodle_util {
      *
      * @return bool
      */
-    static public function require_lib($filepath, $global_all=false){
+    public static function require_lib($filepath, $global_all=false){
         global $CFG;
         if (empty($filepath)){
             return false;
@@ -285,7 +285,7 @@ trait moodle_util {
      *
      * @return bool - true, if ALL files have been loaded correctly
      */
-    static public function require_libs($filepaths, $global_all=false){
+    public static function require_libs($filepaths, $global_all=false){
         $res = true;
         $filepaths = static::val2arr($filepaths);
         foreach ($filepaths as $filepath){
@@ -302,7 +302,7 @@ trait moodle_util {
      *
      * @return bool
      */
-    static public function has_user_access_course($course=null, $user=null){
+    public static function has_user_access_course($course=null, $user=null){
         $user = static::get_chosen_user($user);
         if (!$user){
             return false;
@@ -315,7 +315,7 @@ trait moodle_util {
             return false;
         }
 
-        if ($course->id == SITEID) {
+        if ($course->id == SITEID){
             return true;
         }
 
@@ -333,22 +333,22 @@ trait moodle_util {
         }
 
         $access = false;
-        if (is_viewing($coursecontext, $user)) {
+        if (is_viewing($coursecontext, $user)){
             // Ok, no need to mess with enrol.
             $access = true;
         } else {
-            if (isset($user->enrol['enrolled'][$course->id])) {
-                if ($user->enrol['enrolled'][$course->id] > time()) {
+            if (isset($user->enrol['enrolled'][$course->id])){
+                if ($user->enrol['enrolled'][$course->id] > time()){
                     $access = true;
                 } else {
                     // Expired.
                     unset($user->enrol['enrolled'][$course->id]);
                 }
             }
-            if (isset($user->enrol['tempguest'][$course->id])) {
-                if ($user->enrol['tempguest'][$course->id] == 0) {
+            if (isset($user->enrol['tempguest'][$course->id])){
+                if ($user->enrol['tempguest'][$course->id] == 0){
                     $access = true;
-                } else if ($user->enrol['tempguest'][$course->id] > time()) {
+                } elseif ($user->enrol['tempguest'][$course->id] > time()){
                     $access = true;
                 } else {
                     // Expired.
@@ -356,12 +356,12 @@ trait moodle_util {
                 }
             }
 
-            if (!$access) {
+            if (!$access){
                 // Cache not ok.
                 $until = enrol_get_enrolment_end($coursecontext->instanceid, $user->id);
-                if ($until !== false) {
+                if ($until !== false){
                     // Active participants may always access, a timestamp in the future, 0 (always) or false.
-                    if ($until == 0) {
+                    if ($until == 0){
                         $until = ENROL_MAX_TIMESTAMP;
                     }
                     $user->enrol['enrolled'][$course->id] = $until;
@@ -370,7 +370,7 @@ trait moodle_util {
             }
         }
 
-        return (bool)$access;
+        return $access;
     }
 
     /**
@@ -382,7 +382,7 @@ trait moodle_util {
      *
      * @return bool
      */
-    static public function has_user_access_cm($cmorid, $course=null, $user=null){
+    public static function has_user_access_cm($cmorid, $course=null, $user=null){
         if (!static::has_user_access_course($course, $user)){
             return false;
         }
@@ -392,7 +392,7 @@ trait moodle_util {
         /** @var \cm_info $cm */
         if (!is_object($cmorid)){
             try{
-                list($course, $cm) = get_course_and_cm_from_cmid($cmorid->id ?? $cmorid, '', $course->id ?? 0, $userid);
+                [$course, $cm] = get_course_and_cm_from_cmid($cmorid->id ?? $cmorid, '', $course->id ?? 0, $userid);
             } catch (\Throwable $e){
                 return false;
             }
@@ -415,7 +415,7 @@ trait moodle_util {
     /**
      * @return bool
      */
-    static public function is_desktop(){
+    public static function is_desktop(){
         $devicetype = static::get_devicetype();
         return !($devicetype == \core_useragent::DEVICETYPE_MOBILE || $devicetype == \core_useragent::DEVICETYPE_TABLET);
     }
@@ -430,7 +430,7 @@ trait moodle_util {
      *
      * @throws \moodle_exception
      */
-    static public function print_simple_error($title, $debug_info=null){
+    public static function print_simple_error($title, $debug_info=null){
         $debug_info = $debug_info ? static::arr2str($debug_info, '', "\n") : $debug_info;
         throw new \moodle_exception($title, 'error', '', null, $debug_info);
     }
@@ -448,7 +448,7 @@ trait moodle_util {
      * 1)  debugging('a normal debug notice');
      * 2)  debugging('something really picky', DEBUG_ALL);
      * 3)  debugging('annoying debug message only for developers', DEBUG_DEVELOPER);
-     * 4)  if (debugging()) { perform extra debugging operations (do not use print or echo) }
+     * 4)  if (debugging()){ perform extra debugging operations (do not use print or echo) }
      *
      * In code blocks controlled by debugging() (such as example 4)
      * any output should be routed via debugging() itself, or the lower-level
@@ -463,7 +463,7 @@ trait moodle_util {
      *
      * @return bool
      */
-    static public function debugging($message='', $level=DEBUG_NORMAL, $backtrace=null){
+    public static function debugging($message='', $level=DEBUG_NORMAL, $backtrace=null){
         return debugging($message, $level, $backtrace);
     }
 
@@ -476,7 +476,7 @@ trait moodle_util {
      *
      * @return bool
      */
-    static public function e_debug($message='', $level=C::E_NOTICE, $backtrace=null){
+    public static function e_debug($message='', $level=C::E_NOTICE, $backtrace=null){
         switch ($level){
             default:
             case C::E_NONE:
@@ -497,7 +497,7 @@ trait moodle_util {
      * @param string[]   $add_info
      *
      */
-    static public function cli_debugging($message='', $add_info=[]){
+    public static function cli_debugging($message='', $add_info=[]){
         if (!CLI_SCRIPT){
             return;
         }
@@ -530,7 +530,7 @@ trait moodle_util {
      *
      * @return void
      */
-    static public function download_data($filename, $dataformat, $columns, $data, $callback=null, $use_raw_data=false){
+    public static function download_data($filename, $dataformat, $columns, $data, $callback=null, $use_raw_data=false){
 
         if ($use_raw_data){
             $fields = $columns;
@@ -544,7 +544,7 @@ trait moodle_util {
             $filename = str_replace(' ', '_', $filename);
 
             if (is_null($callback)){
-                $callback = function($datum) use ($fields) {
+                $callback = function($datum) use ($fields){
                     $res = [];
                     foreach ($fields as $key => $column){
                         $res[] = $datum->$key ?? '';
@@ -569,7 +569,7 @@ trait moodle_util {
      *
      * @return float|int|string|null
      */
-    static public function grade_val($val, $as_string=false, $round=false, $def_string_value=''){
+    public static function grade_val($val, $as_string=false, $round=false, $def_string_value=''){
         $round = ($round === 0) ? true : $round;
 
         if (is_null($val)){
@@ -606,7 +606,7 @@ trait moodle_util {
      *
      * @return \moodle_url
      */
-    static public function file_get_url($file, $include_itemid=true, $forcedownload=false){
+    public static function file_get_url($file, $include_itemid=true, $forcedownload=false){
         $path = [$file->get_contextid(), $file->get_component(), $file->get_filearea()];
         if ($include_itemid){
             $path []= $file->get_itemid();
@@ -632,7 +632,7 @@ trait moodle_util {
      *
      * @return \moodle_url
      */
-    static public function file_get_pluginfile_url($file, $forcedownload=false, $includetoken=false){
+    public static function file_get_pluginfile_url($file, $forcedownload=false, $includetoken=false){
         return \moodle_url::make_pluginfile_url(
             $file->get_contextid(),
             $file->get_component(),
@@ -652,7 +652,7 @@ trait moodle_util {
      *
      * @return \core\plugininfo\base|null the corresponding plugin information.
      */
-    static public function get_plugin_info($plugin_component){
+    public static function get_plugin_info($plugin_component){
         return \core_plugin_manager::instance()->get_plugin_info($plugin_component);
     }
 
@@ -663,7 +663,7 @@ trait moodle_util {
      *
      * @return array [$name => $version]
      */
-    static public function get_installed_plugins($plugintype){
+    public static function get_installed_plugins($plugintype){
         return \core_plugin_manager::instance()->get_installed_plugins($plugintype);
     }
 
@@ -674,7 +674,7 @@ trait moodle_util {
      *
      * @return string|null - full path to component directory; NULL if not found
      */
-    static public function get_plugin_directory($plugin_component){
+    public static function get_plugin_directory($plugin_component){
         return \core_component::get_component_directory($plugin_component);
     }
 
@@ -686,7 +686,7 @@ trait moodle_util {
      *
      * @return string|null - full path to plugin directory; null if not found
      */
-    static public function get_plugin_directory_by_type_name($plugintype, $pluginname){
+    public static function get_plugin_directory_by_type_name($plugintype, $pluginname){
         return \core_component::get_plugin_directory($plugintype, $pluginname);
     }
 
@@ -697,7 +697,7 @@ trait moodle_util {
      *
      * @return bool true if plugin installed and exists, else false
      */
-    static public function check_plugin_enabled($plugin_component){
+    public static function check_plugin_enabled($plugin_component){
         return !empty(static::get_plugin_info($plugin_component)) &&
             !empty(static::get_plugin_directory($plugin_component));
     }
@@ -710,7 +710,7 @@ trait moodle_util {
      *
      * @return bool true if plugin installed and exists, else false
      */
-    static public function check_plugin_enabled_by_type_name($plugintype, $pluginname){
+    public static function check_plugin_enabled_by_type_name($plugintype, $pluginname){
         return !empty(static::get_installed_plugins($plugintype)[$pluginname]) &&
            !empty(static::get_plugin_directory_by_type_name($plugintype, $pluginname));
     }
@@ -724,11 +724,11 @@ trait moodle_util {
      *
      * @return array required data for updating a module, list of course module, context, module, moduleinfo, and course section.
      */
-    static public function get_moduleinfo_data($cm_or_id, $courseorid=null){
+    public static function get_moduleinfo_data($cm_or_id, $courseorid=null){
         $cm = static::get_cm_by_cmorid($cm_or_id, $courseorid);
         $args = [$cm->get_course_module_record(true), $cm->get_course()];
         /** @see \get_moduleinfo_data() */
-        list($cm, $context, $module, $data, $cw) = static::run_function_as_admin('get_moduleinfo_data', $args, '/course/modlib.php');
+        [$cm, $context, $module, $data, $cw] = static::run_function_as_admin('get_moduleinfo_data', $args, '/course/modlib.php');
 
         return [$cm, $context, $module, $data, $cw];
     }
@@ -746,10 +746,10 @@ trait moodle_util {
      *
      * @return array list of course module and module info.
      */
-    static public function update_moduleinfo($cm_or_id, $moduleinfo, $courseorid=null, $mform=null){
+    public static function update_moduleinfo($cm_or_id, $moduleinfo, $courseorid=null, $mform=null){
         $cm = static::get_cm_by_cmorid($cm_or_id, $courseorid);
         $cm_object = $cm->get_course_module_record(true);
-        list($cm_object, $moduleinfo) = update_moduleinfo($cm_object, $moduleinfo, $cm->get_course(), $mform);
+        [$cm_object, $moduleinfo] = update_moduleinfo($cm_object, $moduleinfo, $cm->get_course(), $mform);
         return [$cm_object, $moduleinfo];
     }
 }

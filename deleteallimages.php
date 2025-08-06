@@ -52,20 +52,21 @@ $usersfile = $DB->get_records('files', $params);
 $fs = get_file_storage();
 foreach ($usersfile as $file):
     // Prepare file record object.
-    $fileinfo = array(
+    $fileinfo = [
         'component' => 'quizaccess_proctoring',
         'filearea' => 'picture',     // Usually = table name.
         'itemid' => $file->itemid,               // Usually = ID of row in table.
         'contextid' => $context->id, // ID of context.
         'filepath' => '/',           // Any path beginning and ending in /.
-        'filename' => $file->filename); // Any filename.
+        'filename' => $file->filename
+    ]; // Any filename.
 
     // Get file.
     $file = $fs->get_file($fileinfo['contextid'], $fileinfo['component'], $fileinfo['filearea'],
         $fileinfo['itemid'], $fileinfo['filepath'], $fileinfo['filename']);
 
     // Delete it if it exists.
-    if ($file) {
+    if ($file){
         $file->delete();
     }
 endforeach;

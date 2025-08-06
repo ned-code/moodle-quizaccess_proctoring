@@ -26,7 +26,7 @@ trait output {
      *
      * @return \theme_boost\output\core_renderer|\bootstrap_renderer|\core_renderer|object
      */
-    static public function O(){
+    public static function O(){
         global $OUTPUT;
         return $OUTPUT;
     }
@@ -37,7 +37,7 @@ trait output {
      *
      * @return \theme_boost\output\core_renderer|\bootstrap_renderer|\core_renderer|object
      */
-    static public function output(){
+    public static function output(){
         return static::O();
     }
 
@@ -46,7 +46,7 @@ trait output {
      *
      * @return \moodle_page|object
      */
-    static public function page(){
+    public static function page(){
         global $PAGE;
         return $PAGE;
     }
@@ -60,7 +60,7 @@ trait output {
      *
      * @return void
      */
-    static public function page_set_title($title='', $url=null){
+    public static function page_set_title($title='', $url=null){
         global $FULLME;
         $P = static::page();
         $title = static::str_check($title);
@@ -83,7 +83,7 @@ trait output {
      *
      * @return string
      */
-    static public function render(...$args){
+    public static function render(...$args){
         return static::O()->render(...$args);
     }
 
@@ -96,7 +96,7 @@ trait output {
      *
      * @return \renderer_base
      */
-    static public function get_renderer($component=null, $subtype=null, $target=null){
+    public static function get_renderer($component=null, $subtype=null, $target=null){
         return static::page()->get_renderer($component ?: static::$PLUGIN_NAME, $subtype, $target);
     }
 
@@ -110,7 +110,7 @@ trait output {
      *
      * @return string
      */
-    static public function fa($class='', $content='', $title='', $attr=[]){
+    public static function fa($class='', $content='', $title='', $attr=[]){
         $attr = array_merge(['class' => static::arr2str($class, 'icon fa'), 'aria-hidden' => 'true'], $attr);
         if (!empty($title)){
             $attr['title'] = $title;
@@ -129,14 +129,14 @@ trait output {
      *
      * @return string
      */
-    static public function link($url_params='', $text='', $class='', $attr=[], $from_plugin=false){
+    public static function link($url_params='', $text='', $class='', $attr=[], $from_plugin=false){
         if ($url_params instanceof \moodle_url){
             $m_url = $url_params;
         } else {
             if (is_string($url_params)){
-                list($t_url, $params, $anchor) = [$url_params, null, null];
+                [$t_url, $params, $anchor] = [$url_params, null, null];
             } else {
-                list($t_url, $params, $anchor) = $url_params + ['', null, null];
+                [$t_url, $params, $anchor] = $url_params + ['', null, null];
             }
             if (!empty($t_url) && is_string($t_url)){
                 $t_url = static::url($t_url, null, null, $from_plugin);
@@ -159,7 +159,7 @@ trait output {
      *
      * @return string
      */
-    static public function ext_link($url_params='', $text='', $class='', $attr=[], $from_plugin=false){
+    public static function ext_link($url_params='', $text='', $class='', $attr=[], $from_plugin=false){
         $attr = array_merge($attr, ['target' => '_blank']);
         return static::link($url_params, $text, $class, $attr, $from_plugin);
     }
@@ -176,7 +176,7 @@ trait output {
      *
      * @return string
      */
-    static public function button_link($url_params='', $text='', $class='', $primary=false, $attr=[], $from_plugin=false){
+    public static function button_link($url_params='', $text='', $class='', $primary=false, $attr=[], $from_plugin=false){
         $class = static::val2arr($class);
         $class[] = 'btn';
         $class[] = $primary ? 'btn-primary' : 'btn-secondary';
@@ -193,7 +193,7 @@ trait output {
      *
      * @return \html_table_row
      */
-    static public function row($cells=null, $class='', $attr=null){
+    public static function row($cells=null, $class='', $attr=null){
         if (!is_null($cells) && !is_array($cells)){
             $cells = [$cells];
         }
@@ -214,7 +214,7 @@ trait output {
      *
      * @return \html_table_cell
      */
-    static public function cell($text=null, $class='', $attr=null){
+    public static function cell($text=null, $class='', $attr=null){
         if (is_array($text)){
             static::arr2str($text, '', '');
         } elseif (!is_null($text) && !is_string($text)){
@@ -239,7 +239,7 @@ trait output {
      *
      * @return \html_table
      */
-    static public function html_table($class='', $id=null, $head=[]){
+    public static function html_table($class='', $id=null, $head=[]){
         $table = new \html_table();
         if (!empty($class)){
             $table->attributes['class'] = static::arr2str($class);
@@ -262,7 +262,7 @@ trait output {
      *
      * @return string HTML code
      */
-    static public function render_table($table, $wrapper_class='', $add_wrapper=false){
+    public static function render_table($table, $wrapper_class='', $add_wrapper=false){
         $t = \html_writer::table($table);
         if (!empty($wrapper_class) || $add_wrapper){
             if (is_string($add_wrapper)){
@@ -286,7 +286,7 @@ trait output {
      *
      * @return string HTML fragment
      */
-    public static function tag($tagname, $content='', $class='', $attributes=null) {
+    public static function tag($tagname, $content='', $class='', $attributes=null){
         $content = static::arr2str($content, '', " ");
         $attributes = static::val2arr($attributes);
         $attributes['class'] = static::arr2str($class);
@@ -303,7 +303,7 @@ trait output {
      *
      * @return string HTML fragment
      */
-    public static function html_p($content, $class='', $attributes=null) {
+    public static function html_p($content, $class='', $attributes=null){
         return static::tag('p', $content, $class, $attributes);
     }
 
@@ -317,7 +317,7 @@ trait output {
      *
      * @return string HTML fragment
      */
-    public static function html_i($content, $class='', $attributes=null) {
+    public static function html_i($content, $class='', $attributes=null){
         return static::tag('i', $content, $class, $attributes);
     }
 
@@ -365,7 +365,7 @@ trait output {
      * @param array         $attributes Optional other attributes as array
      * @return string HTML code for span
      */
-    public static function span($content, $class='', $attributes=null) {
+    public static function span($content, $class='', $attributes=null){
         return \html_writer::span(static::arr2str($content, '', "\n"), static::arr2str($class), $attributes);
     }
 
@@ -378,11 +378,11 @@ trait output {
      *
      * @return string
      */
-    static public function img($filename, $class='icon', $plugin='moodle', $attr=[], $alt=null){
+    public static function img($filename, $class='icon', $plugin='moodle', $attr=[], $alt=null){
         $plugin = $plugin ?? static::$PLUGIN_NAME;
         if ($filename instanceof \moodle_url){
             $url = $filename;
-        } elseif (is_string($filename) && static::str_starts_with($filename,['http://', 'https://'])) {
+        } elseif (is_string($filename) && static::str_starts_with($filename,['http://', 'https://'])){
             $url = new \moodle_url($filename);
         } else {
             $url = static::$PLUGIN_URL.'/pix/'.$filename;
@@ -414,7 +414,7 @@ trait output {
      *
      * @return string
      */
-    static public function mod_link($activity, $icon_size=20, $only_icon=false, $add_class='', $add_params=[]){
+    public static function mod_link($activity, $icon_size=20, $only_icon=false, $add_class='', $add_params=[]){
         $mod_icon = static::img('icon', 'mod-icon', $activity->modname, ['height' => $icon_size, 'width' => $icon_size]);
         $mod_text = $only_icon ? $mod_icon : $mod_icon .' '. $activity->name;
         $add_params['title'] = $activity->name;
@@ -433,7 +433,7 @@ trait output {
      *
      * @return string the HTML to output.
      */
-    static public function notification($message, $type=C::NOTIFY_INFO){
+    public static function notification($message, $type=C::NOTIFY_INFO){
         return static::O()->notification(static::str_check($message), $type);
     }
 
@@ -445,7 +445,7 @@ trait output {
      *
      * @return void
      */
-    static public function notification_add($message, $type=C::NOTIFY_INFO){
+    public static function notification_add($message, $type=C::NOTIFY_INFO){
         \core\notification::add(static::str_check($message), $type);
     }
 
@@ -460,12 +460,12 @@ trait output {
      *
      * @return string - html link for the file
      */
-    static public function file_get_link($file, $include_itemid=true, $forcedownload=false, $icon_size=16){
+    public static function file_get_link($file, $include_itemid=true, $forcedownload=false, $icon_size=16){
         $filename = $file->get_filename();
         $url = static::file_get_url($file, $include_itemid, $forcedownload);
         $icon = '';
         if ($icon_size){
-            $icon = static::O()->pix_icon(file_file_icon($file, $icon_size), get_mimetype_description($file));
+            $icon = static::O()->pix_icon(file_file_icon($file), get_mimetype_description($file));
         }
 
         return \html_writer::link($url, $icon.$filename);

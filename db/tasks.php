@@ -16,8 +16,8 @@
 
 /**
  * List of task for lict
- * @package    local
- * @subpackage lict_webservicesuite
+ * @package    quizaccess_proctoring
+ * @subpackage task
  * @author     Brain station 23 ltd <brainstation-23.com>
  * @copyright  2020 Brain station 23 ltd
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -25,8 +25,8 @@
 
 defined('MOODLE_INTERNAL') || die;
 
-$tasks = array(
-    array(
+$tasks = [
+    [
         'classname' => 'quizaccess_proctoring\task\initiate_facematch_task',
         'blocking' => 0,
         'minute' => '*/5',
@@ -36,8 +36,8 @@ $tasks = array(
         'dayofweek' => '*',
         'enable' => false,
         'disabled' => 1
-    ),
-    array(
+    ],
+    [
         'classname' => 'quizaccess_proctoring\task\execute_facematch_task',
         'blocking' => 0,
         'minute' => '*/2',
@@ -46,5 +46,5 @@ $tasks = array(
         'month' => '*',
         'dayofweek' => '*',
         'disabled' => 1
-    )
-);
+    ]
+];

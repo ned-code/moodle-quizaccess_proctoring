@@ -31,7 +31,7 @@ $type = required_param('type', PARAM_TEXT);
 $context = context_module::instance($cmid, MUST_EXIST);
 require_capability('quizaccess/proctoring:deletecamshots', $context);
 
-$params = array('cmid' => $cmid, 'type' => $type);
+$params = ['cmid' => $cmid, 'type' => $type];
 $url = new moodle_url(
 '/mod/quiz/accessrule/proctoring/bulkdelete.php',
 $params
@@ -49,24 +49,24 @@ $PAGE->navbar->add('Proctoring: Bulk Delete', $url);
 $helper = new addtional_settings_helper();
 echo $OUTPUT->header();
 
-if ($type == 'course') {
+if ($type == 'course'){
     $camshotdata = $helper->searchbycourseid($cmid);
     $screenshotdata = $helper->searchssbycourseid($cmid);
 
-} else if ($type == 'quiz') {
+} elseif ($type == 'quiz'){
     $camshotdata = $helper->search_by_cmid($cmid);
     $screenshotdata = $helper->search_ss_by_cmid($cmid);
 } else {
     echo "invalid type";
 }
-$rowids = array();
-$ssrowids = array();
-foreach ($camshotdata as $row) {
-    array_push($rowids, $row->id);
+$rowids = [];
+$ssrowids = [];
+foreach ($camshotdata as $row){
+    $rowids[] = $row->id;
 }
 
-foreach ($screenshotdata as $row) {
-    array_push($ssrowids, $row->id);
+foreach ($screenshotdata as $row){
+    $ssrowids[] = $row->id;
 }
 
 $rowidstring = implode(',', $rowids);
@@ -75,9 +75,9 @@ $helper->deletelogs($rowidstring);
 $helper->deletesslogs($ssrowidstring);
 
 
-$params = array(
+$params = [
     'cmid' => $cmid
-);
+];
 $url = new moodle_url(
     '/mod/quiz/accessrule/proctoring/proctoringsummary.php',
     $params

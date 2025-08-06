@@ -32,81 +32,74 @@ class addtional_settings_helper {
      * @param string $email The email of the user.
      * @param string $coursename The coursename.
      * @param string $quizname The quizname for the specific course.
-     * @return array
+     * @return array|\moodle_recordset
      */
     public function search(
         $username,
         $email,
         $coursename,
         $quizname
-    ) {
+    ){
         global $DB;
-        $params = array();
-        $whereclausearray1 = array();
-        $whereclausearray2 = array();
+        $params = [];
+        $whereclausearray1 = [];
+        $whereclausearray2 = [];
 
-        if ($username !== "") {
+        if ($username !== ""){
             $namesplit = explode(" ", $username);
-            if (count($namesplit) > 1) {
-                $namelike1 = "(".$DB->sql_like('u.firstname', ':firstnamelike', false).")";
-                $namelike2 = "(".$DB->sql_like('u.lastname', ':lastnamelike', false).")";
-                array_push($whereclausearray1, $namelike1);
-                array_push($whereclausearray2, $namelike2);
+            $namelike1 = "(".$DB->sql_like('u.firstname', ':firstnamelike', false).")";
+            $namelike2 = "(".$DB->sql_like('u.lastname', ':lastnamelike', false).")";
+            $whereclausearray1[] = $namelike1;
+            $whereclausearray2[] = $namelike2;
 
+            if (count($namesplit) > 1){
                 $params['firstnamelike'] = $namesplit[0];
                 $params['lastnamelike'] = $namesplit[1];
             } else {
-                $namelike1 = "(".$DB->sql_like('u.firstname', ':firstnamelike', false).")";
-                $namelike2 = "(".$DB->sql_like('u.lastname', ':lastnamelike', false).")";
-                array_push($whereclausearray1, $namelike1);
-                array_push($whereclausearray2, $namelike2);
-
                 $params['firstnamelike'] = $username;
                 $params['lastnamelike'] = $username;
             }
         }
 
-        if ($email !== "") {
-            if ($username !== "") {
-                $emaillike1 = " ( ".$DB->sql_like('u.email', ':emaillike1', false)." ) ";
+        if ($email !== ""){
+            $emaillike1 = " ( ".$DB->sql_like('u.email', ':emaillike1', false)." ) ";
+            if ($username !== ""){
                 $emaillike2 = " ( ".$DB->sql_like('u.email', ':emaillike2', false)." ) ";
-                array_push($whereclausearray1, $emaillike1);
-                array_push($whereclausearray2, $emaillike2);
+                $whereclausearray1[] = $emaillike1;
+                $whereclausearray2[] = $emaillike2;
                 $params['emaillike1'] = $email;
                 $params['emaillike2'] = $email;
             } else {
-                $emaillike1 = " ( ".$DB->sql_like('u.email', ':emaillike1', false)." ) ";
-                array_push($whereclausearray1, $emaillike1);
+                $whereclausearray1[] = $emaillike1;
                 $params['emaillike1'] = $email;
             }
         }
 
-        if ($coursename !== "") {
-            if ($username !== "") {
-                $coursenamelike1 = " ( ".$DB->sql_like('c.fullname', ':coursenamelike1', false)." ) ";
+        if ($coursename !== ""){
+            $coursenamelike1 = " ( ".$DB->sql_like('c.fullname', ':coursenamelike1', false)." ) ";
+
+            if ($username !== ""){
                 $coursenamelike2 = " ( ".$DB->sql_like('c.fullname', ':coursenamelike2', false)." ) ";
-                array_push($whereclausearray1, $coursenamelike1);
-                array_push($whereclausearray2, $coursenamelike2);
+                $whereclausearray1[] = $coursenamelike1;
+                $whereclausearray2[] = $coursenamelike2;
                 $params['coursenamelike1'] = $coursename;
                 $params['coursenamelike2'] = $coursename;
             } else {
-                $coursenamelike1 = " ( ".$DB->sql_like('c.fullname', ':coursenamelike1', false)." ) ";
-                array_push($whereclausearray1, $coursenamelike1);
+                $whereclausearray1[] = $coursenamelike1;
                 $params['coursenamelike1'] = $coursename;
             }
         }
 
-        if ($quizname !== "") {
-            if ($username !== "") {
-                $quiznamelike1 = " ( ".$DB->sql_like('q.name', ':quiznamelike1', false)." ) ";
+        if ($quizname !== ""){
+            $quiznamelike1 = " ( ".$DB->sql_like('q.name', ':quiznamelike1', false)." ) ";
+            if ($username !== ""){
                 $quiznamelike2 = " ( ".$DB->sql_like('q.name', ':quiznamelike2', false)." ) ";
-                array_push($whereclausearray1, $quiznamelike1);
-                array_push($whereclausearray2, $quiznamelike2);
+                $whereclausearray1[] = $quiznamelike1;
+                $whereclausearray2[] = $quiznamelike2;
                 $params['quiznamelike1'] = $quizname;
                 $params['quiznamelike2'] = $quizname;
             } else {
-                $quiznamelike1 = " ( ".$DB->sql_like('q.name', ':quiznamelike1', false)." ) ";
-                array_push($whereclausearray1, $quiznamelike1);
+                $whereclausearray1[] = $quiznamelike1;
                 $params['quiznamelike1'] = $quizname;
             }
         }
@@ -114,18 +107,17 @@ class addtional_settings_helper {
         $totalclausecount = count($whereclausearray1) + count($whereclausearray2);
         $secondclausecount = count($whereclausearray2);
 
-        if ($totalclausecount > 0) {
-            if ($secondclausecount > 0) {
-                $andjoin1 = implode(" AND ", $whereclausearray1);
+        if ($totalclausecount > 0){
+            $andjoin1 = implode(" AND ", $whereclausearray1);
+            if ($secondclausecount > 0){
                 $andjoin2 = implode( " AND ", $whereclausearray2);
                 $whereclause = " (".$andjoin1.") OR (".$andjoin2.") ";
             } else {
-                $andjoin1 = implode(" AND ", $whereclausearray1);
                 $whereclause = " (".$andjoin1.")";
             }
         } else {
-            $sqlexecuted = array();
-            return $sqlexecuted;
+            // $sqlexecuted
+            return [];
         }
 
         $sql = "SELECT"
@@ -148,51 +140,49 @@ class addtional_settings_helper {
             ." INNER JOIN {quiz} q  ON q.id = cm.instance "
             ." WHERE $whereclause ";
 
-        $sqlexecuted = $DB->get_recordset_sql($sql, $params);
-        return $sqlexecuted;
+        return $DB->get_recordset_sql($sql, $params);
     }
 
     /**
      * search by course id.
      *
      * @param int $courseid The id of the course.
-     * @return array
+     *
+     * @return \moodle_recordset
      */
-    public function searchbycourseid ($courseid) {
+    public function searchbycourseid ($courseid){
         global $DB;
         $sql = "SELECT *
             FROM {".NED::TABLE_LOG."} e
             WHERE e.courseid = :courseid";
-        $params = array();
+        $params = [];
         $params['courseid'] = $courseid;
-        $sqlexecuted = $DB->get_recordset_sql($sql, $params);
-        return $sqlexecuted;
+        return $DB->get_recordset_sql($sql, $params);
     }
 
     /**
      * search by quiz id.
      *
      * @param int $cmid The id of the course module.
-     * @return array
+     *
+     * @return \moodle_recordset
      */
-    public function search_by_cmid ($cmid) {
+    public function search_by_cmid ($cmid){
         global $DB;
         $sql = "SELECT *
             FROM {".NED::TABLE_LOG."} e
             WHERE e.cmid = :cmid";
-        $params = array();
+        $params = [];
         $params['cmid'] = $cmid;
-        $sqlexecuted = $DB->get_recordset_sql($sql, $params);
-        return $sqlexecuted;
+        return $DB->get_recordset_sql($sql, $params);
     }
 
     /**
      * Get all data.
      *
-     *
-     * @return array
+     * @return \moodle_recordset
      */
-    public function getalldata () {
+    public function getalldata (){
         global $DB;
         $sql = "SELECT
         e.id as reportid,
@@ -214,8 +204,7 @@ class addtional_settings_helper {
         INNER JOIN {quiz} q  ON q.id = cm.instance";
 
         // Prepare data.
-        $sqlexecuted = $DB->get_recordset_sql($sql);
-        return $sqlexecuted;
+        return $DB->get_recordset_sql($sql);
     }
 
     /**
@@ -224,14 +213,14 @@ class addtional_settings_helper {
      * @param string $deleteidstring The id of the quiz.
      * @return void
      */
-    public function deletelogs ($deleteidstring) {
+    public function deletelogs ($deleteidstring){
         global $DB;
         $deleteids = explode(",", $deleteidstring);
-        if (count($deleteids) > 0) {
+        if (count($deleteids) > 0){
             // Get report rows.
             list($insql, $inparams) = $DB->get_in_or_equal($deleteids);
             $logs = $DB->get_records_select(NED::TABLE_LOG, "id $insql", $inparams);
-            foreach ($logs as $row) {
+            foreach ($logs as $row){
                 $id = $row->id;
                 $fileurl = $row->webcampicture;
                 $patharray = explode("/", $fileurl);
@@ -246,7 +235,7 @@ class addtional_settings_helper {
                     'filename' => $filename,
                 ];
                 $usersfiles = $DB->get_records('files', $params);
-                foreach ($usersfiles as $u_row) {
+                foreach ($usersfiles as $u_row){
                     $this->deletefile($u_row);
                 }
             }
@@ -256,25 +245,26 @@ class addtional_settings_helper {
     /**
      * Delete file.
      *
-     * @param string $filerow The id of the quiz.
+     * @param object $filerow The id of the quiz.
      * @return void
      */
-    public function deletefile ($filerow) {
+    public function deletefile ($filerow){
         $fs = get_file_storage();
-        $fileinfo = array(
+        $fileinfo = [
                         'component' => 'quizaccess_proctoring',
                         'filearea' => 'picture',     // Usually = table name.
                         'itemid' => $filerow->itemid,               // Usually = ID of row in table.
                         'contextid' => $filerow->contextid, // ID of context.
                         'filepath' => '/',           // Any path beginning and ending in /.
-                        'filename' => $filerow->filename); // Any filename.
+                        'filename' => $filerow->filename
+        ]; // Any filename.
 
         // Get file.
         $file = $fs->get_file($fileinfo['contextid'], $fileinfo['component'], $fileinfo['filearea'],
         $fileinfo['itemid'], $fileinfo['filepath'], $fileinfo['filename']);
 
         // Delete it if it exists.
-        if ($file) {
+        if ($file){
             $file->delete();
         }
     }
@@ -285,7 +275,7 @@ class addtional_settings_helper {
      * @param int $courseid The id of the course.
      * @return array
      */
-    public function searchssbycourseid ($courseid) {
+    public function searchssbycourseid ($courseid){
         return NED::db()->get_records(NED::TABLE_SCREENSHOT, ['courseid' => $courseid]);
     }
 
@@ -295,7 +285,7 @@ class addtional_settings_helper {
      * @param int $cmid The id of the course module.
      * @return array
      */
-    public function search_ss_by_cmid ($cmid) {
+    public function search_ss_by_cmid ($cmid){
         return NED::db()->get_records(NED::TABLE_SCREENSHOT, ['cmid' => $cmid]);
     }
 
@@ -306,15 +296,15 @@ class addtional_settings_helper {
      * @param string $deleteidstring The id of the quiz.
      * @return void
      */
-    public function deletesslogs ($deleteidstring) {
+    public function deletesslogs ($deleteidstring){
         global $DB;
         $deleteids = explode(",", $deleteidstring);
-        if (count($deleteids) > 0) {
+        if (count($deleteids) > 0){
             // Get report rows.
             list($insql, $inparams) = $DB->get_in_or_equal($deleteids);
             $logs = NED::db()->get_records_select(NED::TABLE_SCREENSHOT, "id $insql", $inparams);
 
-            foreach ($logs as $row) {
+            foreach ($logs as $row){
                 $id = $row->id;
                 $fileurl = $row->screenshot;
                 $patharray = explode("/", $fileurl);
@@ -327,7 +317,7 @@ class addtional_settings_helper {
                     'filename' => $filename,
                 ];
                 $usersfiles = $DB->get_records('files', $params);
-                foreach ($usersfiles as $u_row) {
+                foreach ($usersfiles as $u_row){
                     $this->deletefile($u_row);
                 }
             }
