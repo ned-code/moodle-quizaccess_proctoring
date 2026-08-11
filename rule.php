@@ -29,8 +29,7 @@ defined('MOODLE_INTERNAL') || die();
 /**
  * quizaccess_proctoring
  */
-class quizaccess_proctoring extends quiz_access_rule_base
-{
+class quizaccess_proctoring extends \mod_quiz\local\access_rule_base {
     /**
      * Check is preflight check is required.
      *
@@ -134,8 +133,7 @@ class quizaccess_proctoring extends quiz_access_rule_base
             $attributes['id'] = $id;
             $class =  NED::str2arr($class);
             $class[] = 'proctoring-access-button';
-            $attributes['class'] = NED::arr2str($class);
-            return NED::div(\html_writer::tag('button', $text, $attributes));
+            return NED::div(NED::tag('button', $text, $class, $attributes));
         };
         $dspan = function($id, $text='', $label='', $class='', $attributes=[]){
             $attributes['id'] = $id;
@@ -153,7 +151,7 @@ class quizaccess_proctoring extends quiz_access_rule_base
         $faceidcheck = NED::cfg_faceidcheck();
         $enablescreenshare = NED::cfg_enablescreenshare();
 
-        $record = new \stdClass();
+        $record = (object)[];
         $record->id = 0;
         $record->courseid = (int)$coursedata['courseid'];
         $record->cmid = (int)$coursedata['cmid'];
@@ -223,13 +221,13 @@ class quizaccess_proctoring extends quiz_access_rule_base
      * There is no obligation to return anything. If it is not appropriate to tell students
      * about this rule, then just return ''.
      *
-     * @param quiz $quizobj
+     * @param mod_quiz\quiz_settings|object $quizobj
      * @param int $timenow
      * @param bool $canignoretimelimits
      *
-     * @return quiz_access_rule_base|quizaccess_proctoring|null
+     * @return static|quizaccess_proctoring|null
      */
-    public static function make(quiz $quizobj, $timenow, $canignoretimelimits){
+    public static function make($quizobj, $timenow, $canignoretimelimits){
         if (empty($quizobj->get_quiz()->proctoringrequired)){
             return null;
         }
